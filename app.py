@@ -8,7 +8,7 @@ db = SQLAlchemy(app)
 
 @app.route('/')
 def home():
-    return "Connected to Supabase!"
+    return "Supabase & Flask werken"
 
 if __name__ == '__main__':
     app.run(debug=True)
