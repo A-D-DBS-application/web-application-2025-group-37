@@ -37,7 +37,8 @@
             {{ m.status or 'inactive' }}
           </span>
         </td>
-        <td class="py-3 px-4 text-right">
+        <td class="py-3 px-4 text-right space-x-2">
+          <a class="btn" href="{{ url_for('main.members_payment', member_id=m.member_id) }}">Betaling</a>
           <a class="btn btn-primary" href="{{ url_for('main.members_edit', member_id=m.member_id) }}">Bewerken</a>
         </td>
       </tr>

@@ -44,18 +44,24 @@
       <h3 class="text-lg font-semibold">Kinderen</h3>
       <button type="button" id="add-child" class="btn btn-primary">Kind toevoegen</button>
     </div>
-    <div id="children-list" class="space-y-3">
+  <div id="children-list" class="space-y-3">
       {% if member and member.children %}
         {% for c in member.children %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
           <input name="child_first_name[]" placeholder="Voornaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ c.first_name }}">
-          <input name="child_last_name[]" placeholder="Achternaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ c.last_name }}">
+          <div class="flex gap-2">
+            <input name="child_last_name[]" placeholder="Achternaam" class="flex-1 border rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ c.last_name }}">
+            <button type="button" class="btn remove-child">Verwijderen</button>
+          </div>
         </div>
         {% endfor %}
       {% else %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
           <input name="child_first_name[]" placeholder="Voornaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
-          <input name="child_last_name[]" placeholder="Achternaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+          <div class="flex gap-2">
+            <input name="child_last_name[]" placeholder="Achternaam" class="flex-1 border rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+            <button type="button" class="btn remove-child">Verwijderen</button>
+          </div>
         </div>
       {% endif %}
     </div>
@@ -71,12 +77,28 @@
   document.getElementById('add-child').addEventListener('click', function() {
     const list = document.getElementById('children-list');
     const row = document.createElement('div');
-    row.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+    row.className = 'grid grid-cols-1 md:grid-cols-2 gap-3 items-center';
     row.innerHTML = `
       <input name="child_first_name[]" placeholder="Voornaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
-      <input name="child_last_name[]" placeholder="Achternaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+      <div class="flex gap-2">
+        <input name="child_last_name[]" placeholder="Achternaam" class="flex-1 border rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+        <button type="button" class="btn remove-child">Verwijderen</button>
+      </div>
     `;
     list.appendChild(row);
+  });
+
+  document.getElementById('children-list').addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('remove-child')) {
+      const wrapper = e.target.closest('.grid');
+      if (wrapper && this.children.length > 1) {
+        wrapper.remove();
+      } else {
+        // clear fields if it's the only row
+        const inputs = wrapper.querySelectorAll('input');
+        inputs.forEach(i => i.value = '');
+      }
+    }
   });
 </script>
 {% endblock %}

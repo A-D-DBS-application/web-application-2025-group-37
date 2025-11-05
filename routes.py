@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from datetime import datetime
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from datetime import datetime, date
 from extensions import db
-from models import Member, Child
+from models import Member, Child, User, Bike, Rental, Payment
 
 main = Blueprint('main', __name__)
 
@@ -18,28 +18,66 @@ def home():
 
 @main.route('/bikes')
 def bike_list():
+    query = Bike.query.filter_by(archived=False)
+    bikes = query.order_by(Bike.created_at.desc()).all()
     return render_template('bikes.html', bikes=bikes)
 
-@main.route('/rent/<int:bike_id>')
-def rent_bike(bike_id):
-    bike = next((b for b in bikes if b["id"] == bike_id), None)
-    return render_template('rent.html', bike=bike)
+ 
 
 @main.route('/about')
 def about():
     return render_template('about.html')
 
 # -----------------------
+# Auth (simple session)
+# -----------------------
+
+def login_required(view):
+    def wrapper(*args, **kwargs):
+        if not session.get('user_id'):
+            return redirect(url_for('main.login'))
+        return view(*args, **kwargs)
+    wrapper.__name__ = view.__name__
+    return wrapper
+
+
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    # Seed default user if none
+    if not User.query.first():
+        admin = User(first_name='Admin', last_name='User', email='admin@example.com')
+        admin.set_password('admin')
+        db.session.add(admin)
+        db.session.commit()
+    if request.method == 'POST':
+        email = request.form.get('email','').strip()
+        password = request.form.get('password','')
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            session['user_id'] = user.user_id
+            return redirect(url_for('main.home'))
+        flash('Ongeldige inloggegevens', 'error')
+    return render_template('login.html')
+
+
+@main.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('main.home'))
+
+# -----------------------
 # Member management (Depot manager)
 # -----------------------
 
 @main.route('/members')
+@login_required
 def members_list():
     members = Member.query.order_by(Member.created_at.desc()).all()
     return render_template('members.html', members=members)
 
 
 @main.route('/members/new', methods=['GET', 'POST'])
+@login_required
 def members_new():
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
@@ -84,6 +122,7 @@ def members_new():
 
 
 @main.route('/members/<member_id>/edit', methods=['GET', 'POST'])
+@login_required
 def members_edit(member_id):
     member = Member.query.get_or_404(member_id)
     if request.method == 'POST':
@@ -118,4 +157,96 @@ def members_edit(member_id):
         return redirect(url_for('main.members_list'))
 
     return render_template('member_form.html', mode='edit', member=member)
+
+
+# -----------------------
+# Bikes CRUD and status
+# -----------------------
+
+@main.route('/bikes/new', methods=['GET','POST'])
+@login_required
+def bikes_new():
+    if request.method == 'POST':
+        name = request.form.get('name','').strip()
+        btype = request.form.get('type','').strip()
+        status = request.form.get('status','available')
+        bike = Bike(name=name or 'Fiets', type=btype, status=status)
+        db.session.add(bike)
+        db.session.commit()
+        return redirect(url_for('main.bike_list'))
+    return render_template('bike_form.html', mode='new', bike=None)
+
+
+@main.route('/bikes/<bike_id>/edit', methods=['GET','POST'])
+@login_required
+def bikes_edit(bike_id):
+    bike = Bike.query.get_or_404(bike_id)
+    if request.method == 'POST':
+        bike.name = request.form.get('name','').strip() or bike.name
+        bike.type = request.form.get('type','').strip()
+        bike.status = request.form.get('status','available')
+        db.session.commit()
+        return redirect(url_for('main.bike_list'))
+    return render_template('bike_form.html', mode='edit', bike=bike)
+
+
+@main.route('/bikes/<bike_id>/status', methods=['POST'])
+@login_required
+def bikes_status(bike_id):
+    bike = Bike.query.get_or_404(bike_id)
+    new_status = request.form.get('status','available')
+    bike.status = new_status
+    db.session.commit()
+    return redirect(url_for('main.bike_list'))
+
+
+@main.route('/bikes/<bike_id>/archive', methods=['POST'])
+@login_required
+def bikes_archive(bike_id):
+    bike = Bike.query.get_or_404(bike_id)
+    bike.archived = True
+    db.session.commit()
+    return redirect(url_for('main.bike_list'))
+
+
+# -----------------------
+# Rentals
+# -----------------------
+
+@main.route('/rent/<bike_id>', methods=['GET','POST'])
+@login_required
+def rent_bike_action(bike_id):
+    bike = Bike.query.get_or_404(bike_id)
+    if request.method == 'POST':
+        member_id = request.form.get('member_id')
+        child_id = request.form.get('child_id') or None
+        start_date_raw = request.form.get('start_date')
+        start = date.fromisoformat(start_date_raw) if start_date_raw else date.today()
+        rental = Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id, start_date=start)
+        db.session.add(rental)
+        bike.status = 'rented'
+        db.session.commit()
+        return redirect(url_for('main.bike_list'))
+    members = Member.query.order_by(Member.last_name).all()
+    return render_template('rent.html', bike=bike, members=members)
+
+
+# -----------------------
+# Payments
+# -----------------------
+
+@main.route('/members/<member_id>/payment', methods=['GET','POST'])
+@login_required
+def members_payment(member_id):
+    member = Member.query.get_or_404(member_id)
+    if request.method == 'POST':
+        amount = float(request.form.get('amount','0') or 0)
+        paid_at_raw = request.form.get('paid_at')
+        paid_at = date.fromisoformat(paid_at_raw) if paid_at_raw else date.today()
+        payment = Payment(member_id=member.member_id, amount=amount, paid_at=paid_at)
+        member.last_payment = paid_at
+        db.session.add(payment)
+        db.session.commit()
+        return redirect(url_for('main.members_list'))
+    return render_template('payment_form.html', member=member)
 

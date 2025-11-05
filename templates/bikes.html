@@ -2,26 +2,66 @@
 {% block content %}
 <h2 class="section-title text-2xl md:text-3xl font-semibold mb-6">Beschikbare Fietsen</h2>
 
-<div class="grid md:grid-cols-3 gap-6">
-  {% for bike in bikes %}
-  <div class="card p-4">
-    <h3 class="text-xl font-bold mb-2">{{ bike.name }}</h3>
-    <p class="text-gray-600 mb-1">Type: {{ bike.type }}</p>
-    <p class="mb-4">
-      Status:
-      <span class="badge {% if bike.status == 'Beschikbaar' %}badge-success{% else %}badge-danger{% endif %}">
-        {{ bike.status }}
-      </span>
-    </p>
-    {% if bike.status == 'Beschikbaar' %}
-    <a href="{{ url_for('main.rent_bike', bike_id=bike.id) }}"
-       class="btn btn-primary">
-       Huur deze fiets
-    </a>
-    {% else %}
-    <button class="btn btn-disabled" disabled>Niet beschikbaar</button>
-    {% endif %}
-  </div>
-  {% endfor %}
+<div class="flex items-center justify-between mb-4">
+  <h2 class="section-title text-2xl md:text-3xl font-semibold">Fietsen</h2>
+  <a href="{{ url_for('main.bikes_new') }}" class="btn btn-primary">Nieuwe fiets</a>
+</div>
+
+<div class="card w-full p-4">
+  <table class="w-full text-left">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="py-3 px-4">Naam</th>
+        <th class="py-3 px-4">Type</th>
+        <th class="py-3 px-4">Status</th>
+        <th class="py-3 px-4 pr-6">Acties</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bikes %}
+      <tr class="border-t">
+        <td class="py-3 px-4 font-medium">{{ b.name }}</td>
+        <td class="py-3 px-4">{{ b.type or '-' }}</td>
+        <td class="py-3 px-4">
+          <span class="badge {% if b.status == 'available' %}badge-success{% else %}badge-danger{% endif %}">{{ b.status }}</span>
+        </td>
+        <td class="py-3 px-4">
+          <div class="flex items-center justify-end gap-2 flex-nowrap pr-6">
+            {% if b.status == 'available' %}
+              <a class="btn btn-primary btn-sm" href="{{ url_for('main.rent_bike_action', bike_id=b.bike_id) }}">Verhuren</a>
+            {% endif %}
+            <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="flex items-center gap-2 shrink-0">
+              <select name="status" class="border rounded p-1 text-sm h-9 w-auto">
+                <option value="available" {{ 'selected' if b.status=='available' else '' }}>available</option>
+                <option value="rented" {{ 'selected' if b.status=='rented' else '' }}>rented</option>
+                <option value="repair" {{ 'selected' if b.status=='repair' else '' }}>repair</option>
+              </select>
+              <button class="btn btn-primary btn-sm">Opslaan</button>
+            </form>
+            <a class="icon-btn tooltip shrink-0" data-tooltip="Bewerken" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="Bewerken" title="Bewerken">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/>
+              </svg>
+            </a>
+            <form method="POST" action="{{ url_for('main.bikes_archive', bike_id=b.bike_id) }}" class="shrink-0">
+              <button class="icon-btn tooltip" data-tooltip="Archiveren" aria-label="Archiveren" title="Archiveren">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="4" rx="1"/>
+                  <path d="M5 8h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/>
+                  <path d="M10 12h4"/>
+                </svg>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td class="py-6 px-4 text-gray-600" colspan="4">Geen fietsen. Voeg een nieuwe fiets toe.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

@@ -32,6 +32,8 @@ body {
   border: 1px solid #eef2f7;
   border-radius: 0.75rem;
   box-shadow: 0 4px 16px rgba(2, 6, 23, 0.06);
+  /* Ensures inner table/header backgrounds are clipped to rounded corners */
+  overflow: hidden;
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
 .card:hover {
@@ -64,6 +66,52 @@ body {
 }
 .btn-primary:hover { background: var(--brand-700); }
 
+/* Small button variant for dense table actions */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+}
+
+/* Icon-only buttons for tight action bars */
+.icon-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: #f3f4f6; /* gray-100 */
+  color: var(--ink);
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.icon-btn:hover { background: #e5e7eb; /* gray-200 */ }
+.icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+
+/* Tooltips via data-tooltip attribute */
+.tooltip { position: relative; }
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -36px;
+  right: 0;
+  padding: 4px 8px;
+  background: #111827; /* gray-900 */
+  color: #fff;
+  border-radius: 0.375rem;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(2,6,23,0.18);
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 50;
+}
+.tooltip:hover::after { opacity: 1; transform: translateY(0); }
+
 .btn-disabled,
 .btn[disabled] {
   color: #fff;
@@ -90,4 +138,4 @@ body {
 }
 
 /* Subtle container max-width on very large screens (Tailwind container is fine; this complements it) */
-.container { max-width: 1200px; }
+.container { max-width: 1280px; }
