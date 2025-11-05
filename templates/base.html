@@ -14,18 +14,15 @@
     <div class="container mx-auto flex justify-between items-center">
   <h1 class="text-2xl font-bold">🚲 OpWielekes</h1>
       <div class="flex items-center gap-4">
-        <a href="{{ url_for('main.home') }}" class="hover:underline">{{ t('Home') }}</a>
-        <a href="{{ url_for('main.bike_list') }}" class="hover:underline">{{ t('Fietsen') }}</a>
-        <a href="{{ url_for('main.members_list') }}" class="hover:underline">{{ t('Leden') }}</a>
-        <a href="{{ url_for('main.about') }}" class="hover:underline">{{ t('Over') }}</a>
         {% if session.get('user_id') %}
+          <a href="{{ url_for('main.bike_list') }}" class="hover:underline">{{ t('Fietsen') }}</a>
+          <a href="{{ url_for('main.members_list') }}" class="hover:underline">{{ t('Leden') }}</a>
+          <a href="{{ url_for('main.about') }}" class="hover:underline">{{ t('Over') }}</a>
           <a href="{{ url_for('main.logout') }}" class="hover:underline">{{ t('Logout') }}</a>
-        {% else %}
-          <a href="{{ url_for('main.login') }}" class="hover:underline">{{ t('Login') }}</a>
         {% endif %}
         <div class="ml-2 inline-flex items-center gap-2 text-sm">
-          <a class="px-2 py-1 rounded bg-white/10 hover:bg-white/20" href="{{ url_for('main.set_language', lang_code='nl', next=request.full_path) }}">NL</a>
-          <a class="px-2 py-1 rounded bg-white/10 hover:bg-white/20" href="{{ url_for('main.set_language', lang_code='fr', next=request.full_path) }}">FR</a>
+          <a class="px-3 py-1 rounded border border-white/20 bg-white/10 hover:bg-white/20" href="{{ url_for('main.set_language', lang_code='nl', next=request.full_path) }}">NL</a>
+          <a class="px-3 py-1 rounded border border-white/20 bg-white/10 hover:bg-white/20" href="{{ url_for('main.set_language', lang_code='fr', next=request.full_path) }}">FR</a>
         </div>
       </div>
     </div>
@@ -42,6 +39,23 @@
   <footer class="bg-gray-200 text-center py-4 mt-8">
     <p>{{ t('© 2025 OpWielekes – Alle rechten voorbehouden') }}</p>
   </footer>
+
+  <!-- Global reveal-on-scroll script so .reveal works on every page -->
+  <script>
+    (function(){
+      var items = document.querySelectorAll('.reveal');
+      if (!items.length) return;
+      function show(el){ el.classList.add('show'); }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function(entries){
+          entries.forEach(function(e){ if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
+        }, { rootMargin: '0px 0px -10% 0px' });
+        items.forEach(function(el){ io.observe(el); });
+      } else {
+        items.forEach(show);
+      }
+    })();
+  </script>
 
 </body>
 </html>

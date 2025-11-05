@@ -1,4 +1,5 @@
-from flask import Flask, g, session, request
+from flask import Flask, g, session, request, url_for
+import os
 from routes import main
 from config import Config
 from extensions import db
@@ -32,10 +33,39 @@ def create_app():
 
     @app.context_processor
     def _inject_i18n():
+        def static_or(filename: str, fallback_url: str):
+            """Return url_for('static', filename) if file exists, else fallback_url.
+            Allows using local images when provided, with network fallback otherwise.
+            """
+            try:
+                path = os.path.join(app.static_folder, filename.replace('/', os.sep))
+                if os.path.isfile(path):
+                    # Cache-bust with file mtime to avoid stale images
+                    mtime = int(os.path.getmtime(path))
+                    return url_for('static', filename=filename, v=mtime)
+            except Exception:
+                pass
+            return fallback_url
+
+        def static_first(filenames, fallback_url: str = None):
+            """Return the first existing static file URL from a list, else fallback_url.
+            Example: static_first(['img/home/logo-nl.svg','img/logo-nl.svg'], url_for('static', filename='img/logo.svg'))
+            """
+            for name in filenames or []:
+                try:
+                    path = os.path.join(app.static_folder, name.replace('/', os.sep))
+                    if os.path.isfile(path):
+                        mtime = int(os.path.getmtime(path))
+                        return url_for('static', filename=name, v=mtime)
+                except Exception:
+                    continue
+            return fallback_url
         return {
             't': getattr(g, 't', lambda s: s),
             'current_lang': getattr(g, 'lang', 'nl'),
             'LANGUAGES': LANGUAGES,
+            'static_or': static_or,
+            'static_first': static_first,
         }
 
     return app

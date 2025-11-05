@@ -14,7 +14,10 @@ bikes = [
 
 @main.route('/')
 def home():
-    return render_template('index.html')
+    # Home is the Depot Manager login. If already logged in, go to bikes dashboard.
+    if session.get('user_id'):
+        return redirect(url_for('main.bike_list'))
+    return render_template('login.html')
 
 @main.route('/bikes')
 def bike_list():
@@ -27,6 +30,18 @@ def bike_list():
 @main.route('/about')
 def about():
     return render_template('about.html')
+
+# -----------------------
+# Password reset (simplified placeholder)
+# -----------------------
+
+@main.route('/password-reset', methods=['GET','POST'])
+def password_reset():
+    if request.method == 'POST':
+        email = request.form.get('email','')
+        flash('We hebben een reset-link gemaild indien het adres bestaat.', 'info')
+        return redirect(url_for('main.login'))
+    return render_template('password_reset.html')
 
 # -----------------------
 # Language selection
