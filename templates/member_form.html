@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="section-title text-2xl md:text-3xl font-semibold mb-4">{{ 'Nieuw lid' if mode == 'new' else 'Lid bewerken' }}</h2>
+
+<form method="POST" class="card p-6 space-y-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block mb-1 font-medium">Voornaam</label>
+      <input name="first_name" type="text" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.first_name if member else '' }}" required>
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Achternaam</label>
+      <input name="last_name" type="text" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.last_name if member else '' }}" required>
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Email</label>
+      <input name="email" type="email" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.email if member else '' }}">
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Telefoonnummer</label>
+      <input name="phone" type="text" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.phone if member else '' }}">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block mb-1 font-medium">Adres</label>
+      <input name="address" type="text" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.address if member else '' }}">
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Laatste betaling</label>
+      <input name="last_payment" type="date" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.last_payment.strftime('%Y-%m-%d') if member and member.last_payment else '' }}">
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Status</label>
+      <select name="status" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+        {% set st = (member.status if member else 'active') %}
+        <option value="active" {{ 'selected' if st=='active' else '' }}>active</option>
+        <option value="inactive" {{ 'selected' if st=='inactive' else '' }}>inactive</option>
+        <option value="paused" {{ 'selected' if st=='paused' else '' }}>paused</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="pt-4 border-t">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-lg font-semibold">Kinderen</h3>
+      <button type="button" id="add-child" class="btn btn-primary">Kind toevoegen</button>
+    </div>
+    <div id="children-list" class="space-y-3">
+      {% if member and member.children %}
+        {% for c in member.children %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input name="child_first_name[]" placeholder="Voornaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ c.first_name }}">
+          <input name="child_last_name[]" placeholder="Achternaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ c.last_name }}">
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input name="child_first_name[]" placeholder="Voornaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+          <input name="child_last_name[]" placeholder="Achternaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3 pt-2">
+    <button class="btn btn-primary">{{ 'Aanmaken' if mode == 'new' else 'Opslaan' }}</button>
+    <a class="btn" href="{{ url_for('main.members_list') }}">Annuleren</a>
+  </div>
+</form>
+
+<script>
+  document.getElementById('add-child').addEventListener('click', function() {
+    const list = document.getElementById('children-list');
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+    row.innerHTML = `
+      <input name="child_first_name[]" placeholder="Voornaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+      <input name="child_last_name[]" placeholder="Achternaam" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
+    `;
+    list.appendChild(row);
+  });
+</script>
+{% endblock %}

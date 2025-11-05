@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="text-2xl font-semibold mb-4">Beschikbare Fietsen</h2>
+<h2 class="section-title text-2xl md:text-3xl font-semibold mb-6">Beschikbare Fietsen</h2>
 
 <div class="grid md:grid-cols-3 gap-6">
   {% for bike in bikes %}
-  <div class="bg-white rounded-xl shadow-md p-4 border border-gray-100">
+  <div class="card p-4">
     <h3 class="text-xl font-bold mb-2">{{ bike.name }}</h3>
     <p class="text-gray-600 mb-1">Type: {{ bike.type }}</p>
     <p class="mb-4">
       Status:
-      <span class="{% if bike.status == 'Beschikbaar' %}text-green-600{% else %}text-red-500{% endif %}">
+      <span class="badge {% if bike.status == 'Beschikbaar' %}badge-success{% else %}badge-danger{% endif %}">
         {{ bike.status }}
       </span>
     </p>
     {% if bike.status == 'Beschikbaar' %}
     <a href="{{ url_for('main.rent_bike', bike_id=bike.id) }}"
-       class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+       class="btn btn-primary">
        Huur deze fiets
     </a>
     {% else %}
-    <button class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed">Niet beschikbaar</button>
+    <button class="btn btn-disabled" disabled>Niet beschikbaar</button>
     {% endif %}
   </div>
   {% endfor %}

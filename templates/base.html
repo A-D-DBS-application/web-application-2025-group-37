@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fietsbibliotheek</title>
+  <title>OpWielekes</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body class="bg-gray-50 text-gray-800">
 
   <!-- Navbar -->
-  <nav class="bg-green-600 text-white p-4 shadow-md">
+  <nav class="navbar bg-green-600 text-white p-4 shadow-md">
     <div class="container mx-auto flex justify-between items-center">
-      <h1 class="text-2xl font-bold">🚲 Fietsbibliotheek</h1>
+  <h1 class="text-2xl font-bold">🚲 OpWielekes</h1>
       <div class="space-x-4">
         <a href="{{ url_for('main.home') }}" class="hover:underline">Home</a>
         <a href="{{ url_for('main.bike_list') }}" class="hover:underline">Fietsen</a>
+        <a href="{{ url_for('main.members_list') }}" class="hover:underline">Leden</a>
         <a href="{{ url_for('main.about') }}" class="hover:underline">Over</a>
       </div>
     </div>
@@ -27,7 +29,7 @@
 
   <!-- Footer -->
   <footer class="bg-gray-200 text-center py-4 mt-8">
-    <p>© 2025 Fietsbibliotheek – Alle rechten voorbehouden</p>
+    <p>© 2025 OpWielekes – Alle rechten voorbehouden</p>
   </footer>
 
 </body>

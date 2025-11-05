@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <h2 class="section-title text-2xl md:text-3xl font-semibold">Leden</h2>
+  <a href="{{ url_for('main.members_new') }}" class="btn btn-primary">Nieuw lid</a>
+</div>
+
+<div class="card overflow-x-auto">
+  <table class="min-w-full text-left">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="py-3 px-4">Name</th>
+        <th class="py-3 px-4">Email</th>
+        <th class="py-3 px-4">Phone</th>
+        <th class="py-3 px-4">Address</th>
+        <th class="py-3 px-4">Last Payment</th>
+        <th class="py-3 px-4">Status</th>
+        <th class="py-3 px-4 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in members %}
+      <tr class="border-t">
+        <td class="py-3 px-4 whitespace-nowrap font-medium">{{ m.first_name }} {{ m.last_name }}</td>
+        <td class="py-3 px-4">{{ m.email or '-' }}</td>
+        <td class="py-3 px-4">{{ m.phone or '-' }}</td>
+        <td class="py-3 px-4">{{ m.address or '-' }}</td>
+        <td class="py-3 px-4">
+          {% if m.last_payment %}
+            {{ m.last_payment.strftime('%Y-%m-%d') }}
+          {% else %}
+            <span class="text-orange-600">No payment</span>
+          {% endif %}
+        </td>
+        <td class="py-3 px-4">
+          <span class="badge {% if m.status == 'active' %}badge-success{% else %}badge-danger{% endif %}">
+            {{ m.status or 'inactive' }}
+          </span>
+        </td>
+        <td class="py-3 px-4 text-right">
+          <a class="btn btn-primary" href="{{ url_for('main.members_edit', member_id=m.member_id) }}">Bewerken</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td class="py-6 px-4 text-gray-600" colspan="7">Geen leden gevonden. Voeg je eerste lid toe.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
