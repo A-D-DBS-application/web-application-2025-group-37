@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+{% if bike %}
+  <h2 class="text-2xl font-semibold mb-4">Fiets Huren</h2>
+  <div class="bg-white rounded-xl shadow-md p-6 max-w-lg mx-auto">
+    <h3 class="text-xl font-bold mb-2">{{ bike.name }}</h3>
+    <p class="text-gray-600 mb-4">Type: {{ bike.type }}</p>
+    <form method="POST" action="#">
+      <label class="block mb-2 font-medium">Naam:</label>
+      <input type="text" class="border w-full rounded p-2 mb-4" placeholder="Jouw naam">
+
+      <label class="block mb-2 font-medium">Huurperiode:</label>
+      <input type="date" class="border w-full rounded p-2 mb-4">
+
+      <button class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition">
+        Bevestig Huur
+      </button>
+    </form>
+  </div>
+{% else %}
+  <p>❌ Fiets niet gevonden.</p>
+{% endif %}
+{% endblock %}

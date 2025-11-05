@@ -1,14 +1,12 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from config import Config
+from routes import main
 
-app = Flask(__name__)
-app.config.from_object(Config)
-db = SQLAlchemy(app)
+def create_app():
+    app = Flask(__name__)
+    app.register_blueprint(main)
+    return app
 
-@app.route('/')
-def home():
-    return "Supabase & Flask werken"
-
-if __name__ == '__main__':
+if __name__ == "__main__":
+    app = create_app()
     app.run(debug=True)
+
