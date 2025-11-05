@@ -29,6 +29,18 @@ def about():
     return render_template('about.html')
 
 # -----------------------
+# Language selection
+# -----------------------
+
+@main.route('/lang/<lang_code>')
+def set_language(lang_code):
+    if lang_code not in ['nl', 'fr']:
+        lang_code = 'nl'
+    session['lang'] = lang_code
+    next_url = request.args.get('next') or url_for('main.home')
+    return redirect(next_url)
+
+# -----------------------
 # Auth (simple session)
 # -----------------------
 

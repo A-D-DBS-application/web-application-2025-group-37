@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="{{ current_lang }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,19 +13,25 @@
   <nav class="navbar bg-green-600 text-white p-4 shadow-md">
     <div class="container mx-auto flex justify-between items-center">
   <h1 class="text-2xl font-bold">🚲 OpWielekes</h1>
-      <div class="space-x-4">
-        <a href="{{ url_for('main.home') }}" class="hover:underline">Home</a>
-        <a href="{{ url_for('main.bike_list') }}" class="hover:underline">Fietsen</a>
-        <a href="{{ url_for('main.members_list') }}" class="hover:underline">Leden</a>
-        <a href="{{ url_for('main.about') }}" class="hover:underline">Over</a>
+      <div class="flex items-center gap-4">
+        <a href="{{ url_for('main.home') }}" class="hover:underline">{{ t('Home') }}</a>
+        <a href="{{ url_for('main.bike_list') }}" class="hover:underline">{{ t('Fietsen') }}</a>
+        <a href="{{ url_for('main.members_list') }}" class="hover:underline">{{ t('Leden') }}</a>
+        <a href="{{ url_for('main.about') }}" class="hover:underline">{{ t('Over') }}</a>
         {% if session.get('user_id') %}
-          <a href="{{ url_for('main.logout') }}" class="hover:underline">Logout</a>
+          <a href="{{ url_for('main.logout') }}" class="hover:underline">{{ t('Logout') }}</a>
         {% else %}
-          <a href="{{ url_for('main.login') }}" class="hover:underline">Login</a>
+          <a href="{{ url_for('main.login') }}" class="hover:underline">{{ t('Login') }}</a>
         {% endif %}
+        <div class="ml-2 inline-flex items-center gap-2 text-sm">
+          <a class="px-2 py-1 rounded bg-white/10 hover:bg-white/20" href="{{ url_for('main.set_language', lang_code='nl', next=request.full_path) }}">NL</a>
+          <a class="px-2 py-1 rounded bg-white/10 hover:bg-white/20" href="{{ url_for('main.set_language', lang_code='fr', next=request.full_path) }}">FR</a>
+        </div>
       </div>
     </div>
   </nav>
+
+  
 
   <!-- Content -->
   <main class="container mx-auto p-6">
@@ -34,7 +40,7 @@
 
   <!-- Footer -->
   <footer class="bg-gray-200 text-center py-4 mt-8">
-    <p>© 2025 OpWielekes – Alle rechten voorbehouden</p>
+    <p>{{ t('© 2025 OpWielekes – Alle rechten voorbehouden') }}</p>
   </footer>
 
 </body>
