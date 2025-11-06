@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# Load env vars from a local .env file if present (shared pattern for all devs)
+load_dotenv()
 
 
 class Config:
