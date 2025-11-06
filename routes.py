@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from datetime import datetime, date
 from extensions import db
 from models import Member, Child, User, Bike, Rental, Payment
+from sqlalchemy import text
 
 main = Blueprint('main', __name__)
 
@@ -141,6 +142,29 @@ def members_new():
             fn, ln = fn.strip(), ln.strip()
             if fn or ln:
                 db.session.add(Child(member_id=member.member_id, first_name=fn or '-', last_name=ln or '-'))
+
+        # Mirror this member into Supabase public.Users (best-effort, isolated from the current transaction)
+        # Use a separate engine connection so any error here doesn't poison the active ORM session.
+        try:
+            with db.engine.begin() as conn:
+                try:
+                    # Prefer table "Users" (common naming in Supabase)
+                    conn.execute(
+                        text('INSERT INTO public."Users" (first_name, last_name, email) VALUES (:fn, :ln, :em)'),
+                        {"fn": first_name, "ln": last_name, "em": email or None}
+                    )
+                except Exception as e1:
+                    try:
+                        # Fallback to table "User" if your schema uses that name
+                        conn.execute(
+                            text('INSERT INTO public."User" (first_name, last_name, email) VALUES (:fn, :ln, :em)'),
+                            {"fn": first_name, "ln": last_name, "em": email or None}
+                        )
+                    except Exception as e2:
+                        print(f"Supabase mirror insert failed (non-blocking): {e1} / {e2}")
+        except Exception as e:
+            # Any unexpected engine/connection error — keep non-blocking
+            print(f"Supabase mirror engine error (non-blocking): {e}")
 
         db.session.commit()
         return redirect(url_for('main.members_list'))

@@ -18,7 +18,20 @@ def create_app():
 
     # Create tables in dev; for production use migrations
     with app.app_context():
-        db.create_all()
+        # Be resilient: don't crash the app if the target DB (e.g., Supabase pooler) rejects DDL
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"create_all skipped due to error: {e}")
+        # Log a safe summary of the active DB connection (no secrets)
+        try:
+            url = db.engine.url
+            driver = getattr(url, 'drivername', 'unknown')
+            host = getattr(url, 'host', None)
+            database = getattr(url, 'database', None)
+            print(f"SQLAlchemy connected: driver={driver} host={host} db={database}")
+        except Exception:
+            pass
 
     # --- i18n wiring (simple dictionary-based) ---
     @app.before_request

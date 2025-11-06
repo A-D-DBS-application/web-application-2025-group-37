@@ -17,6 +17,9 @@ class Employee(db.Model):
     employee_type = db.Column(db.String(50))
 
 class User(db.Model):
+    # Keep app's own auth table separate from Supabase mirror
+    __tablename__ = 'user'
+
     user_id = db.Column(db.String, primary_key=True, default=gen_uuid)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     first_name = db.Column(db.String(100))
