@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from datetime import datetime, date
-from extensions import db
-from models import Member, Child, User, Bike, Rental, Payment
+from app.extensions import db
+from app.models import Member, Child, User, Bike, Rental, Payment
 from sqlalchemy import text
 
 main = Blueprint('main', __name__)

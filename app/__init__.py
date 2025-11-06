@@ -1,9 +1,9 @@
 from flask import Flask, g, session, request, url_for
 import os
-from routes import main
-from config import Config
-from extensions import db
-from i18n import get_translator, LANGUAGES
+from app.routes import main
+from app.config import Config
+from app.extensions import db
+from app.i18n import get_translator, LANGUAGES
 
 def create_app():
     app = Flask(__name__)
