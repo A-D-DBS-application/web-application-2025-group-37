@@ -45,6 +45,7 @@ TRANSLATIONS = {
         'Verhuren': 'Louer',
         'Bewerken': 'Modifier',
         'Archiveren': 'Archiver',
+    'Verwijderen': 'Supprimer',
         'Naam': 'Nom',
         'Type': 'Type',
         'Status': 'Statut',
@@ -75,6 +76,10 @@ TRANSLATIONS = {
         'We sturen je een link om je wachtwoord te resetten.': 'Nous vous envoyons un lien pour réinitialiser votre mot de passe.',
         'Stuur reset-link': 'Envoyer le lien de réinitialisation',
         'Terug naar inloggen': 'Retour à la connexion',
+        # Members
+        'Nieuw lid': 'Nouveau membre',
+        'Betaling': 'Paiement',
+        'No payment': 'Pas de paiement',
     },
     'nl': {}
 }

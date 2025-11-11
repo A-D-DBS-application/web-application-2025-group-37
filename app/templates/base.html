@@ -12,7 +12,10 @@
   <!-- Navbar -->
   <nav class="navbar bg-green-600 text-white p-4 shadow-md">
     <div class="container mx-auto flex justify-between items-center">
-  <h1 class="text-2xl font-bold">🚲 OpWielekes</h1>
+  <a href="{{ url_for('main.home') }}" class="flex items-center gap-3 group">
+    <img class="h-10 w-auto" src="{{ static_first(['img/home/logo-' ~ current_lang ~ '.svg', 'img/logo-' ~ current_lang ~ '.svg'], url_for('static', filename='img/logo-' ~ current_lang ~ '.svg')) }}" alt="{{ current_lang == 'fr' and 'TataBicyclette' or 'OpWielekes' }}" />
+    <span class="text-2xl font-bold tracking-tight">{{ current_lang == 'fr' and 'TataBicyclette' or 'OpWielekes' }}</span>
+  </a>
       <div class="flex items-center gap-4">
         {% if session.get('user_id') %}
           <a href="{{ url_for('main.bike_list') }}" class="hover:underline">{{ t('Fietsen') }}</a>
@@ -35,10 +38,6 @@
     {% block content %}{% endblock %}
   </main>
 
-  <!-- Footer -->
-  <footer class="bg-gray-200 text-center py-4 mt-8">
-    <p>{{ t('© 2025 OpWielekes – Alle rechten voorbehouden') }}</p>
-  </footer>
 
   <!-- Global reveal-on-scroll script so .reveal works on every page -->
   <script>

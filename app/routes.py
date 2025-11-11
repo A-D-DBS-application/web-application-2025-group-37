@@ -259,6 +259,17 @@ def bikes_archive(bike_id):
     db.session.commit()
     return redirect(url_for('main.bike_list'))
 
+@main.route('/bikes/<bike_id>/delete', methods=['POST'])
+@login_required
+def bikes_delete(bike_id):
+    bike = Bike.query.get_or_404(bike_id)
+    # Remove dependent rentals to avoid FK constraint issues
+    Rental.query.filter_by(bike_id=bike.bike_id).delete(synchronize_session=False)
+    db.session.delete(bike)
+    db.session.commit()
+    flash('Fiets verwijderd', 'info')
+    return redirect(url_for('main.bike_list'))
+
 
 # -----------------------
 # Rentals
@@ -300,4 +311,16 @@ def members_payment(member_id):
         db.session.commit()
         return redirect(url_for('main.members_list'))
     return render_template('payment_form.html', member=member)
+
+@main.route('/members/<member_id>/delete', methods=['POST'])
+@login_required
+def members_delete(member_id):
+    member = Member.query.get_or_404(member_id)
+    # Remove dependent rentals and payments first
+    Rental.query.filter_by(member_id=member.member_id).delete(synchronize_session=False)
+    Payment.query.filter_by(member_id=member.member_id).delete(synchronize_session=False)
+    db.session.delete(member)
+    db.session.commit()
+    flash('Lid verwijderd', 'info')
+    return redirect(url_for('main.members_list'))
 

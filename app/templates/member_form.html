@@ -68,7 +68,14 @@
   </div>
 
   <div class="flex items-center gap-3 pt-2">
-    <button class="btn btn-primary">{{ 'Aanmaken' if mode == 'new' else 'Opslaan' }}</button>
+    <button class="btn btn-primary tooltip" aria-label="{{ 'Aanmaken' if mode == 'new' else t('Opslaan') }}" title="{{ 'Aanmaken' if mode == 'new' else t('Opslaan') }}" data-tooltip="{{ 'Aanmaken' if mode == 'new' else t('Opslaan') }}">
+      <span class="sr-only">{{ 'Aanmaken' if mode == 'new' else t('Opslaan') }}</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <path d="M17 21V13H7v8"/>
+        <path d="M7 3v5h8"/>
+      </svg>
+    </button>
     <a class="btn" href="{{ url_for('main.members_list') }}">Annuleren</a>
   </div>
 </form>

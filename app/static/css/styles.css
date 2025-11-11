@@ -42,6 +42,13 @@ body {
   border-color: #e5e7eb;
 }
 
+/* Disable card hover lift for table cards so entire table doesn't "jump" */
+.card.table-card:hover {
+  transform: none;
+  box-shadow: 0 4px 16px rgba(2, 6, 23, 0.06);
+  border-color: #eef2f7;
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -54,6 +61,7 @@ body {
   transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 120ms ease;
   box-shadow: 0 1px 0 rgba(0,0,0,0.04);
 }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 2px 0 rgba(0,0,0,0.04); }
 .btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px var(--ring);
@@ -84,10 +92,28 @@ body {
   border-radius: 0.5rem;
   background: #f3f4f6; /* gray-100 */
   color: var(--ink);
-  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
 }
-.icon-btn:hover { background: #e5e7eb; /* gray-200 */ }
+.icon-btn:hover { background: #e5e7eb; /* gray-200 */ transform: translateY(-1px); box-shadow: 0 2px 0 rgba(0,0,0,0.04); }
 .icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring); }
+.icon-btn:active { transform: translateY(1px); }
+
+/* Colored icon button variant (primary) */
+.icon-btn-primary {
+  background: var(--brand);
+  color: #fff;
+}
+.icon-btn-primary:hover { background: var(--brand-700); }
+
+/* Danger variant */
+.icon-btn-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.icon-btn-danger:hover { background: #fecaca; }
+
+/* Compact row of action icons */
+.actions-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; }
 
 /* Tooltips via data-tooltip attribute */
 .tooltip { position: relative; }
