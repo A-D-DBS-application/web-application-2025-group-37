@@ -18,9 +18,9 @@
   </a>
       <div class="flex items-center gap-4">
         {% if session.get('user_id') %}
+          <a href="{{ url_for('main.dashboard') }}" class="hover:underline">{{ t('Dashboard') }}</a>
           <a href="{{ url_for('main.bike_list') }}" class="hover:underline">{{ t('Fietsen') }}</a>
           <a href="{{ url_for('main.members_list') }}" class="hover:underline">{{ t('Leden') }}</a>
-          <a href="{{ url_for('main.about') }}" class="hover:underline">{{ t('Over') }}</a>
           <a href="{{ url_for('main.logout') }}" class="hover:underline">{{ t('Logout') }}</a>
         {% endif %}
         <div class="ml-2 inline-flex items-center gap-2 text-sm">

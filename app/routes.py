@@ -15,9 +15,9 @@ bikes = [
 
 @main.route('/')
 def home():
-    # Home is the Depot Manager login. If already logged in, go to bikes dashboard.
+    # Home is the Depot Manager login. If already logged in, ga naar dashboard.
     if session.get('user_id'):
-        return redirect(url_for('main.bike_list'))
+        return redirect(url_for('main.dashboard'))
     return render_template('login.html')
 
 @main.route('/bikes')
@@ -25,12 +25,6 @@ def bike_list():
     query = Bike.query.filter_by(archived=False)
     bikes = query.order_by(Bike.created_at.desc()).all()
     return render_template('bikes.html', bikes=bikes)
-
- 
-
-@main.route('/about')
-def about():
-    return render_template('about.html')
 
 # -----------------------
 # Password reset (simplified placeholder)
@@ -83,7 +77,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             session['user_id'] = user.user_id
-            return redirect(url_for('main.home'))
+            return redirect(url_for('main.dashboard'))
         flash('Ongeldige inloggegevens', 'error')
     return render_template('login.html')
 
@@ -102,6 +96,16 @@ def logout():
 def members_list():
     members = Member.query.order_by(Member.created_at.desc()).all()
     return render_template('members.html', members=members)
+
+
+@main.route('/dashboard')
+@login_required
+def dashboard():
+    # Overzicht: alleen actieve leden en beschikbare fietsen (geen verhuur secties)
+    # Alfabetisch op achternaam, daarna voornaam
+    active_members = Member.query.filter_by(status='active').order_by(Member.last_name.asc(), Member.first_name.asc()).all()
+    available_bikes = Bike.query.filter_by(status='available', archived=False).order_by(Bike.created_at.desc()).all()
+    return render_template('dashboard.html', active_members=active_members, available_bikes=available_bikes)
 
 
 @main.route('/members/new', methods=['GET', 'POST'])

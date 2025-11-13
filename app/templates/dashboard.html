@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-3xl font-bold mb-8">{{ t('Dashboard') }}</h1>
+
+<div class="grid gap-6 md:grid-cols-2 mb-4">
+  <!-- Actieve leden -->
+  <section class="p-6 rounded-xl bg-white shadow-sm border border-gray-100 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold tracking-wide text-gray-600">{{ t('Actieve leden') }}</h2>
+      <div class="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-xl">👥</div>
+    </div>
+    <p class="text-lg font-medium mb-2">{{ active_members|length }} {{ t('actief') }}</p>
+    <div class="text-sm text-gray-500 space-y-1 mb-4">
+      {% for m in active_members[:6] %}
+        <div>{{ m.first_name }} {{ m.last_name }}</div>
+      {% else %}
+        <div>{{ t('Geen actieve leden.') }}</div>
+      {% endfor %}
+    </div>
+    <a href="{{ url_for('main.members_list') }}" class="mt-auto inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800">{{ t('Bekijk leden →') }}</a>
+  </section>
+
+  <!-- Beschikbare fietsen -->
+  <section class="p-6 rounded-xl bg-white shadow-sm border border-gray-100 flex flex-col">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold tracking-wide text-gray-600">{{ t('Beschikbare fietsen') }}</h2>
+      <div class="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center text-xl">🚲</div>
+    </div>
+    <p class="text-lg font-medium mb-2">{{ available_bikes|length }} {{ t('beschikbaar') }}</p>
+    <div class="text-sm text-gray-500 space-y-1 mb-4">
+      {% for b in available_bikes[:6] %}
+        <div>{{ b.name }} <span class="text-gray-400">({{ b.type or '—' }})</span></div>
+      {% else %}
+        <div>{{ t('Geen beschikbare fietsen.') }}</div>
+      {% endfor %}
+    </div>
+    <a href="{{ url_for('main.bike_list') }}" class="mt-auto inline-flex items-center text-sm font-medium text-green-600 hover:text-green-800">{{ t('Bekijk fietsen →') }}</a>
+  </section>
+</div>
+{% endblock %}

@@ -10,6 +10,7 @@ TRANSLATIONS = {
     'fr': {
         # Navbar
         'Home': 'Accueil',
+        'Dashboard': 'Tableau de bord',
         'Fietsen': 'Vélos',
         'Leden': 'Membres',
         'Over': 'À propos',
@@ -80,6 +81,15 @@ TRANSLATIONS = {
         'Nieuw lid': 'Nouveau membre',
         'Betaling': 'Paiement',
         'No payment': 'Pas de paiement',
+        # Dashboard specific
+        'Actieve leden': 'Membres actifs',
+        'Beschikbare fietsen': 'Vélos disponibles',
+        'Bekijk leden →': 'Voir les membres →',
+        'Bekijk fietsen →': 'Voir les vélos →',
+        'Geen actieve leden.': 'Aucun membre actif.',
+        'Geen beschikbare fietsen.': 'Aucun vélo disponible.',
+        'actief': 'actif',
+        'beschikbaar': 'disponible',
     },
     'nl': {}
 }
