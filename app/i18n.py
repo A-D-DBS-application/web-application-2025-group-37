@@ -90,6 +90,8 @@ TRANSLATIONS = {
         'Geen beschikbare fietsen.': 'Aucun vélo disponible.',
         'actief': 'actif',
         'beschikbaar': 'disponible',
+        'verhuurd': 'loué',
+        'in herstelling': 'en réparation',
     },
     'nl': {}
 }

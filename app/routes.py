@@ -223,7 +223,9 @@ def members_edit(member_id):
 def bikes_new():
     if request.method == 'POST':
         name = request.form.get('name','').strip()
-        btype = request.form.get('type','').strip()
+        btype = request.form.get('type','').strip().lower()
+        if btype not in {'elektrisch','gewoon'}:
+            btype = 'gewoon'
         status = request.form.get('status','available')
         bike = Bike(name=name or 'Fiets', type=btype, status=status)
         db.session.add(bike)
@@ -238,7 +240,9 @@ def bikes_edit(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     if request.method == 'POST':
         bike.name = request.form.get('name','').strip() or bike.name
-        bike.type = request.form.get('type','').strip()
+        _t = request.form.get('type','').strip().lower()
+        if _t in {'elektrisch','gewoon'}:
+            bike.type = _t
         bike.status = request.form.get('status','available')
         db.session.commit()
         return redirect(url_for('main.bike_list'))

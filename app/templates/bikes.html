@@ -23,7 +23,8 @@
         <td class="py-3 px-4 font-medium">{{ b.name }}</td>
         <td class="py-3 px-4">{{ b.type or '-' }}</td>
         <td class="py-3 px-4">
-          <span class="badge {% if b.status == 'available' %}badge-success{% else %}badge-danger{% endif %}">{{ b.status }}</span>
+          {% set status_labels = {'available': t('beschikbaar'), 'rented': t('verhuurd'), 'repair': t('in herstelling')} %}
+          <span class="badge {% if b.status == 'available' %}badge-success{% elif b.status == 'rented' %}badge-danger{% else %}badge-warning{% endif %}">{{ status_labels.get(b.status, b.status) }}</span>
         </td>
         <td class="py-3 px-4">
           <div class="flex items-center justify-end gap-2 flex-nowrap pr-6">
@@ -32,9 +33,9 @@
             {% endif %}
             <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="flex items-center gap-2 shrink-0">
               <select name="status" class="border rounded p-1 text-sm h-9 w-auto">
-                <option value="available" {{ 'selected' if b.status=='available' else '' }}>available</option>
-                <option value="rented" {{ 'selected' if b.status=='rented' else '' }}>rented</option>
-                <option value="repair" {{ 'selected' if b.status=='repair' else '' }}>repair</option>
+                <option value="available" {{ 'selected' if b.status=='available' else '' }}>{{ t('beschikbaar') }}</option>
+                <option value="rented" {{ 'selected' if b.status=='rented' else '' }}>{{ t('verhuurd') }}</option>
+                <option value="repair" {{ 'selected' if b.status=='repair' else '' }}>{{ t('in herstelling') }}</option>
               </select>
               <button class="icon-btn icon-btn-primary tooltip" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}" data-tooltip="{{ t('Opslaan') }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
