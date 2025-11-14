@@ -96,8 +96,17 @@ def logout():
 @main.route('/members')
 @login_required
 def members_list():
-    members = Member.query.order_by(Member.created_at.desc()).all()
-    return render_template('members.html', members=members)
+    active_members = (
+        Member.query.filter_by(status='active')
+        .order_by(Member.last_name.asc(), Member.first_name.asc())
+        .all()
+    )
+    inactive_members = (
+        Member.query.filter(Member.status != 'active')
+        .order_by(Member.last_name.asc(), Member.first_name.asc())
+        .all()
+    )
+    return render_template('members.html', active_members=active_members, inactive_members=inactive_members)
 
 
 @main.route('/members/<member_id>/children', methods=['GET'])
@@ -256,6 +265,16 @@ def members_edit(member_id):
         return redirect(url_for('main.members_list'))
 
     return render_template('member_form.html', mode='edit', member=member)
+
+
+@main.route('/members/<member_id>/status', methods=['POST'])
+@login_required
+def members_status(member_id):
+    member = Member.query.get_or_404(member_id)
+    new_status = request.form.get('status', 'active')
+    member.status = 'active' if new_status == 'active' else 'inactive'
+    db.session.commit()
+    return redirect(url_for('main.members_list'))
 
 
 # -----------------------
