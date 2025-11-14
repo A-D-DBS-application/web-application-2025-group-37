@@ -9,6 +9,9 @@ def create_app():
     app = Flask(__name__)
     # Load configuration
     app.config.from_object(Config)
+    # Ensure template changes show immediately during development
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
     # Initialize extensions
     db.init_app(app)

@@ -15,7 +15,7 @@
         <th class="py-3 px-4">Address</th>
         <th class="py-3 px-4 w-36">Last Payment</th>
         <th class="py-3 px-4 w-28">Status</th>
-        <th class="py-3 px-4 w-48 text-right">Actions</th>
+        <th class="py-3 px-4 w-56 text-right">Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -39,6 +39,14 @@
         </td>
         <td class="py-3 px-4">
           <div class="actions-row">
+            <a class="icon-btn tooltip" href="{{ url_for('main.members_children', member_id=m.member_id) }}" aria-label="{{ t('Kinderen') }}" title="{{ t('Kinderen') }}" data-tooltip="{{ t('Kinderen') }}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.85"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </a>
             <a class="icon-btn tooltip" href="{{ url_for('main.members_payment', member_id=m.member_id) }}" aria-label="{{ t('Betaling') }}" title="{{ t('Betaling') }}" data-tooltip="{{ t('Betaling') }}">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="5" width="20" height="14" rx="2"/>

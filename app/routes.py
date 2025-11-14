@@ -22,9 +22,11 @@ def home():
 
 @main.route('/bikes')
 def bike_list():
-    query = Bike.query.filter_by(archived=False)
-    bikes = query.order_by(Bike.created_at.desc()).all()
-    return render_template('bikes.html', bikes=bikes)
+    base = Bike.query.filter_by(archived=False)
+    available_bikes = base.filter_by(status='available').order_by(Bike.created_at.desc()).all()
+    rented_bikes = base.filter_by(status='rented').order_by(Bike.created_at.desc()).all()
+    repair_bikes = base.filter_by(status='repair').order_by(Bike.created_at.desc()).all()
+    return render_template('bikes.html', available_bikes=available_bikes, rented_bikes=rented_bikes, repair_bikes=repair_bikes)
 
 # -----------------------
 # Password reset (simplified placeholder)
@@ -96,6 +98,48 @@ def logout():
 def members_list():
     members = Member.query.order_by(Member.created_at.desc()).all()
     return render_template('members.html', members=members)
+
+
+@main.route('/members/<member_id>/children', methods=['GET'])
+@login_required
+def members_children(member_id):
+    member = Member.query.get_or_404(member_id)
+    children = Child.query.filter_by(member_id=member.member_id).all()
+    # Map active rentals per child
+    active_rentals = {r.child_id: r for r in Rental.query.filter_by(status='active').all()}
+    # Available bikes to assign
+    available_bikes = Bike.query.filter_by(status='available', archived=False).order_by(Bike.created_at.desc()).all()
+    return render_template('children.html', member=member, children=children, active_rentals=active_rentals, available_bikes=available_bikes)
+
+
+@main.route('/members/<member_id>/children/add', methods=['POST'])
+@login_required
+def members_children_add(member_id):
+    member = Member.query.get_or_404(member_id)
+    fn = (request.form.get('first_name') or '').strip()
+    ln = (request.form.get('last_name') or '').strip()
+    if fn or ln:
+        db.session.add(Child(member_id=member.member_id, first_name=fn or '-', last_name=ln or '-'))
+        db.session.commit()
+    return redirect(url_for('main.members_children', member_id=member.member_id))
+
+
+@main.route('/members/<member_id>/children/<child_id>/assign', methods=['POST'])
+@login_required
+def members_children_assign(member_id, child_id):
+    member = Member.query.get_or_404(member_id)
+    child = Child.query.get_or_404(child_id)
+    bike_id = request.form.get('bike_id')
+    bike = Bike.query.get_or_404(bike_id)
+    # Only allow assigning available bikes
+    if bike.archived or bike.status != 'available':
+        flash('Fiets niet beschikbaar', 'error')
+        return redirect(url_for('main.members_children', member_id=member.member_id))
+    rental = Rental(bike_id=bike.bike_id, member_id=member.member_id, child_id=child.child_id)
+    db.session.add(rental)
+    bike.status = 'rented'
+    db.session.commit()
+    return redirect(url_for('main.members_children', member_id=member.member_id))
 
 
 @main.route('/dashboard')

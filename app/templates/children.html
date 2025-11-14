@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <h2 class="text-2xl md:text-3xl font-semibold">{{ t('Kinderen van') }} {{ member.first_name }} {{ member.last_name }}</h2>
+    <div class="text-gray-500 text-sm">{{ member.email }}</div>
+  </div>
+  <form method="POST" action="{{ url_for('main.members_children_add', member_id=member.member_id) }}" class="flex items-center gap-2">
+    <input name="first_name" placeholder="{{ t('Voornaam') }}" class="border rounded p-2" required>
+    <input name="last_name" placeholder="{{ t('Achternaam') }}" class="border rounded p-2" required>
+    <button class="btn btn-primary">{{ t('Kind toevoegen') }}</button>
+  </form>
+</div>
+
+<div class="card table-card">
+  <table class="w-full text-left">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="py-3 px-4 w-1/5">{{ t('Voornaam') }}</th>
+        <th class="py-3 px-4 w-1/5">{{ t('Achternaam') }}</th>
+        <th class="py-3 px-4">{{ t('Momenteel verhuurd') }}</th>
+        <th class="py-3 px-4 w-2/5">{{ t('Fiets toewijzen') }}</th>
+        <th class="py-3 px-4 w-28">{{ t('Acties') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in children %}
+      {% set r = active_rentals.get(c.child_id) %}
+      <tr class="border-t align-top">
+        <td class="py-3 px-4">{{ c.first_name }}</td>
+        <td class="py-3 px-4">{{ c.last_name }}</td>
+        <td class="py-3 px-4">
+          {% if r %}
+            <div class="text-sm">
+              <div>{{ t('Fiets') }}: <strong>{{ r.bike_id }}</strong></div>
+              <div>{{ t('Start') }}: {{ r.start_date }}</div>
+            </div>
+          {% else %}
+            <span class="text-gray-500">{{ t('Geen actieve verhuur') }}</span>
+          {% endif %}
+        </td>
+        <td class="py-3 px-4">
+          {% if not r %}
+          <form method="POST" action="{{ url_for('main.members_children_assign', member_id=member.member_id, child_id=c.child_id) }}" class="flex items-center gap-2">
+            <select name="bike_id" class="border rounded p-2 min-w-[220px]" required>
+              <option value="" disabled selected>{{ t('Selecteer fiets') }}</option>
+              {% for b in available_bikes %}
+                <option value="{{ b.bike_id }}">{{ b.name }} ({{ b.type or '—' }})</option>
+              {% else %}
+                <option value="" disabled>{{ t('Geen beschikbare fietsen.') }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-primary">{{ t('Toewijzen') }}</button>
+          </form>
+          {% else %}
+          <span class="text-gray-500">{{ t('Reeds toegewezen') }}</span>
+          {% endif %}
+        </td>
+        <td class="py-3 px-4">
+          <!-- Reserve for future actions (verwijderen/retour) -->
+        </td>
+      </tr>
+    {% else %}
+      <tr>
+        <td class="py-6 px-4 text-gray-600" colspan="5">{{ t('Geen kinderen voor dit lid') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

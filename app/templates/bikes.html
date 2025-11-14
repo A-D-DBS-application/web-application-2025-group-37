@@ -1,77 +1,156 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="section-title text-2xl md:text-3xl font-semibold mb-6">{{ t('Beschikbare Items') }}</h2>
 
 <div class="flex items-center justify-between mb-4">
   <h2 class="section-title text-2xl md:text-3xl font-semibold">{{ t('Fietsen') }}</h2>
   <a href="{{ url_for('main.bikes_new') }}" class="btn btn-primary">{{ t('Nieuwe fiets') }}</a>
-</div>
+  </div>
 
-  <div class="card table-card w-full p-4">
+{% set status_labels = {'available': t('beschikbaar'), 'rented': t('verhuurd'), 'repair': t('in herstelling')} %}
+
+<!-- Beschikbare fietsen -->
+<div class="card table-card w-full p-4 mb-6">
+  <h3 class="text-lg font-semibold mb-3">{{ t('Beschikbare fietsen') }}</h3>
   <table class="w-full text-left">
     <thead class="bg-gray-50">
       <tr>
-  <th class="py-3 px-4">{{ t('Naam') }}</th>
-  <th class="py-3 px-4">{{ t('Type') }}</th>
-  <th class="py-3 px-4">{{ t('Status') }}</th>
-  <th class="py-3 px-4 pr-6">{{ t('Acties') }}</th>
+        <th class="py-3 px-4">{{ t('Naam') }}</th>
+        <th class="py-3 px-4">{{ t('Type') }}</th>
+        <th class="py-3 px-4">{{ t('Status') }}</th>
+        <th class="py-3 px-4 pr-6">{{ t('Acties') }}</th>
       </tr>
     </thead>
     <tbody>
-      {% for b in bikes %}
+      {% for b in available_bikes %}
       <tr class="border-t">
         <td class="py-3 px-4 font-medium">{{ b.name }}</td>
         <td class="py-3 px-4">{{ b.type or '-' }}</td>
-        <td class="py-3 px-4">
-          {% set status_labels = {'available': t('beschikbaar'), 'rented': t('verhuurd'), 'repair': t('in herstelling')} %}
-          <span class="badge {% if b.status == 'available' %}badge-success{% elif b.status == 'rented' %}badge-danger{% else %}badge-warning{% endif %}">{{ status_labels.get(b.status, b.status) }}</span>
-        </td>
+        <td class="py-3 px-4"><span class="badge badge-success">{{ status_labels['available'] }}</span></td>
         <td class="py-3 px-4">
           <div class="flex items-center justify-end gap-2 flex-nowrap pr-6">
-            {% if b.status == 'available' %}
-              <a class="btn btn-primary btn-sm" href="{{ url_for('main.rent_bike_action', bike_id=b.bike_id) }}">{{ t('Verhuren') }}</a>
-            {% endif %}
+            <a class="btn btn-primary btn-sm" href="{{ url_for('main.rent_bike_action', bike_id=b.bike_id) }}">{{ t('Verhuren') }}</a>
             <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="flex items-center gap-2 shrink-0">
               <select name="status" class="border rounded p-1 text-sm h-9 w-auto">
-                <option value="available" {{ 'selected' if b.status=='available' else '' }}>{{ t('beschikbaar') }}</option>
-                <option value="rented" {{ 'selected' if b.status=='rented' else '' }}>{{ t('verhuurd') }}</option>
-                <option value="repair" {{ 'selected' if b.status=='repair' else '' }}>{{ t('in herstelling') }}</option>
+                <option value="available" selected>{{ t('beschikbaar') }}</option>
+                <option value="rented">{{ t('verhuurd') }}</option>
+                <option value="repair">{{ t('in herstelling') }}</option>
               </select>
               <button class="icon-btn icon-btn-primary tooltip" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}" data-tooltip="{{ t('Opslaan') }}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <path d="M17 21V13H7v8"/>
-                  <path d="M7 3v5h8"/>
-                </svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
               </button>
             </form>
             <a class="icon-btn icon-btn-primary tooltip shrink-0" data-tooltip="{{ t('Bewerken') }}" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="{{ t('Bewerken') }}" title="{{ t('Bewerken') }}">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/>
-              </svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
             </a>
             <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="shrink-0" onsubmit="return confirm('Verwijderen?');">
               <button class="icon-btn tooltip" data-tooltip="{{ t('Verwijderen') }}" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 6h18"/>
-                  <path d="M8 6V4h8v2"/>
-                  <path d="M10 11v6"/>
-                  <path d="M14 11v6"/>
-                  <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/>
-                </svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
             </form>
           </div>
         </td>
       </tr>
       {% else %}
-      <tr>
-  <td class="py-6 px-4 text-gray-600" colspan="4">{{ t('Geen fietsen. Voeg een nieuwe fiets toe.') }}</td>
-      </tr>
+      <tr><td class="py-6 px-4 text-gray-600" colspan="4">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
-  <div class="card table-card overflow-x-auto">
+
+<!-- Verhuurde fietsen -->
+<div class="card table-card w-full p-4 mb-6">
+  <h3 class="text-lg font-semibold mb-3">{{ t('Verhuurde fietsen') }}</h3>
+  <table class="w-full text-left">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="py-3 px-4">{{ t('Naam') }}</th>
+        <th class="py-3 px-4">{{ t('Type') }}</th>
+        <th class="py-3 px-4">{{ t('Status') }}</th>
+        <th class="py-3 px-4 pr-6">{{ t('Acties') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in rented_bikes %}
+      <tr class="border-t">
+        <td class="py-3 px-4 font-medium">{{ b.name }}</td>
+        <td class="py-3 px-4">{{ b.type or '-' }}</td>
+        <td class="py-3 px-4"><span class="badge badge-danger">{{ status_labels['rented'] }}</span></td>
+        <td class="py-3 px-4">
+          <div class="flex items-center justify-end gap-2 flex-nowrap pr-6">
+            <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="flex items-center gap-2 shrink-0">
+              <select name="status" class="border rounded p-1 text-sm h-9 w-auto">
+                <option value="available">{{ t('beschikbaar') }}</option>
+                <option value="rented" selected>{{ t('verhuurd') }}</option>
+                <option value="repair">{{ t('in herstelling') }}</option>
+              </select>
+              <button class="icon-btn icon-btn-primary tooltip" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}" data-tooltip="{{ t('Opslaan') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
+              </button>
+            </form>
+            <a class="icon-btn icon-btn-primary tooltip shrink-0" data-tooltip="{{ t('Bewerken') }}" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="{{ t('Bewerken') }}" title="{{ t('Bewerken') }}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
+            </a>
+            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="shrink-0" onsubmit="return confirm('Verwijderen?');">
+              <button class="icon-btn tooltip" data-tooltip="{{ t('Verwijderen') }}" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="py-6 px-4 text-gray-600" colspan="4">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Fietsen in herstelling -->
+<div class="card table-card w-full p-4">
+  <h3 class="text-lg font-semibold mb-3">{{ t('Fietsen in herstelling') }}</h3>
+  <table class="w-full text-left">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="py-3 px-4">{{ t('Naam') }}</th>
+        <th class="py-3 px-4">{{ t('Type') }}</th>
+        <th class="py-3 px-4">{{ t('Status') }}</th>
+        <th class="py-3 px-4 pr-6">{{ t('Acties') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in repair_bikes %}
+      <tr class="border-t">
+        <td class="py-3 px-4 font-medium">{{ b.name }}</td>
+        <td class="py-3 px-4">{{ b.type or '-' }}</td>
+        <td class="py-3 px-4"><span class="badge badge-warning">{{ status_labels['repair'] }}</span></td>
+        <td class="py-3 px-4">
+          <div class="flex items-center justify-end gap-2 flex-nowrap pr-6">
+            <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="flex items-center gap-2 shrink-0">
+              <select name="status" class="border rounded p-1 text-sm h-9 w-auto">
+                <option value="available">{{ t('beschikbaar') }}</option>
+                <option value="rented">{{ t('verhuurd') }}</option>
+                <option value="repair" selected>{{ t('in herstelling') }}</option>
+              </select>
+              <button class="icon-btn icon-btn-primary tooltip" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}" data-tooltip="{{ t('Opslaan') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
+              </button>
+            </form>
+            <a class="icon-btn icon-btn-primary tooltip shrink-0" data-tooltip="{{ t('Bewerken') }}" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="{{ t('Bewerken') }}" title="{{ t('Bewerken') }}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
+            </a>
+            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="shrink-0" onsubmit="return confirm('Verwijderen?');">
+              <button class="icon-btn tooltip" data-tooltip="{{ t('Verwijderen') }}" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="py-6 px-4 text-gray-600" colspan="4">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 {% endblock %}
