@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+    <h1 class="text-3xl font-bold text-gray-900">{{ t('Betalingen') }}</h1>
+    <a href="{{ url_for('main.payment_new') }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all shadow-lg hover:shadow-xl" style="background: linear-gradient(135deg, #ee6c4d 0%, #d55a3e 100%);">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      {{ t('Nieuwe betaling registreren') }}
+    </a>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <!-- Card 1: Total Payments -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1">€{{ "%.2f"|format(total_payments) }}</div>
+      <div class="text-sm text-gray-500">{{ t('Totale betalingen') }}</div>
+    </div>
+
+    <!-- Card 2: Cash Payments -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1">€{{ "%.2f"|format(cash_payments) }}</div>
+      <div class="text-sm text-gray-500">{{ t('Contante betalingen') }}</div>
+    </div>
+
+    <!-- Card 3: Card Payments -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1">€{{ "%.2f"|format(card_payments) }}</div>
+      <div class="text-sm text-gray-500">{{ t('Kaartbetalingen') }}</div>
+    </div>
+
+    <!-- Card 4: Bank Transfer -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1">€{{ "%.2f"|format(bank_payments) }}</div>
+      <div class="text-sm text-gray-500">{{ t('Bankoverschrijvingen') }}</div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+    <form method="get" action="{{ url_for('main.payments_list') }}" class="flex flex-col md:flex-row gap-4">
+      <!-- Payment Method Filter -->
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Betaalmethode') }}</label>
+        <select name="method" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="all" {% if method_filter == 'all' %}selected{% endif %}>{{ t('Alle') }}</option>
+          <option value="cash" {% if method_filter == 'cash' %}selected{% endif %}>{{ t('Contant') }}</option>
+          <option value="card" {% if method_filter == 'card' %}selected{% endif %}>{{ t('Kaart') }}</option>
+          <option value="bank_transfer" {% if method_filter == 'bank_transfer' %}selected{% endif %}>{{ t('Bankoverschrijving') }}</option>
+        </select>
+      </div>
+
+      <!-- Date Range Filter -->
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Periode') }}</label>
+        <select name="period" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="all" {% if period_filter == 'all' %}selected{% endif %}>{{ t('Alle') }}</option>
+          <option value="today" {% if period_filter == 'today' %}selected{% endif %}>{{ t('Vandaag') }}</option>
+          <option value="week" {% if period_filter == 'week' %}selected{% endif %}>{{ t('Deze week') }}</option>
+          <option value="month" {% if period_filter == 'month' %}selected{% endif %}>{{ t('Deze maand') }}</option>
+        </select>
+      </div>
+
+      <!-- Search -->
+      <div class="flex-[2]">
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Zoek op lid') }}</label>
+        <div class="flex gap-2">
+          <input type="text" name="search" value="{{ search_query }}" placeholder="{{ t('Zoek op naam lid') }}" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table / Cards -->
+  {% if payments_data %}
+  <!-- Desktop Table -->
+  <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Datum') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Lid') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Bedrag') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Methode') }}</th>
+          <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Ontvangen') }}</th>
+          <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for payment, member in payments_data %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <!-- Date -->
+          <td class="px-6 py-4 text-gray-700">
+            {{ payment.paid_at.strftime('%d/%m/%Y') if payment.paid_at else '-' }}
+          </td>
+
+          <!-- Member -->
+          <td class="px-6 py-4">
+            <a href="{{ url_for('main.members_list') }}" class="font-medium text-gray-900 hover:text-blue-600">{{ member.first_name }} {{ member.last_name }}</a>
+            <div class="text-xs text-gray-500">{{ member.email or '' }}</div>
+          </td>
+
+          <!-- Amount -->
+          <td class="px-6 py-4">
+            <span class="font-semibold text-gray-900">€{{ "%.2f"|format(payment.amount) }}</span>
+          </td>
+
+          <!-- Method -->
+          <td class="px-6 py-4">
+            {% if payment.method == 'cash' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              {{ t('Contant') }}
+            </span>
+            {% elif payment.method == 'card' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              {{ t('Kaart') }}
+            </span>
+            {% elif payment.method == 'bank_transfer' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+              {{ t('Bank') }}
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Ontvangen Status (alleen voor bank transfers) -->
+          <td class="px-6 py-4 text-center">
+            {% if payment.method == 'bank_transfer' %}
+              {% if payment.received %}
+              <!-- Ontvangen: toon groen vinkje met klik om uit te vinken -->
+              <form action="{{ url_for('main.payment_toggle_received', payment_id=payment.payment_id) }}" method="POST" class="inline-block" onsubmit="return confirmToggle(event, {{ payment.received|tojson }})">
+                <button type="submit" class="text-green-600 hover:text-green-700 transition-colors" title="{{ t('Klik om te markeren als niet-ontvangen') }}">
+                  <svg class="w-5 h-5 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                  </svg>
+                </button>
+              </form>
+              {% else %}
+              <!-- Niet ontvangen: toon checkbox om aan te vinken -->
+              <form action="{{ url_for('main.payment_toggle_received', payment_id=payment.payment_id) }}" method="POST" class="inline-block">
+                <label class="inline-flex items-center cursor-pointer" title="{{ t('Klik om te markeren als ontvangen') }}">
+                  <input type="checkbox" onchange="this.form.submit()" class="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-2 focus:ring-green-500 cursor-pointer">
+                </label>
+              </form>
+              {% endif %}
+            {% else %}
+            <span class="text-green-600">
+              <svg class="w-5 h-5 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td class="px-6 py-4 text-right">
+            <div class="relative inline-block text-left">
+              <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleDropdown(event, 'dropdown-{{ payment.payment_id }}')">
+                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                </svg>
+              </button>
+              <div id="dropdown-{{ payment.payment_id }}" class="hidden absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                <div class="py-1">
+                  <a href="{{ url_for('main.members_list') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    {{ t('Lid bekijken') }}
+                  </a>
+                  <button onclick="confirmDeletePayment('{{ payment.payment_id }}')" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    {{ t('Verwijderen') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="md:hidden space-y-4">
+    {% for payment, member in payments_data %}
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <!-- Member & Date -->
+      <div class="flex items-start gap-4 mb-4">
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-gray-900">{{ member.first_name }} {{ member.last_name }}</div>
+          <div class="text-sm text-gray-500">{{ payment.paid_at.strftime('%d/%m/%Y') if payment.paid_at else '-' }}</div>
+        </div>
+        <!-- Method Badge -->
+        <div class="flex flex-col items-end gap-1">
+          {% if payment.method == 'cash' %}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            {{ t('Contant') }}
+          </span>
+          {% elif payment.method == 'card' %}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            {{ t('Kaart') }}
+          </span>
+          {% elif payment.method == 'bank_transfer' %}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            {{ t('Bank') }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Amount & Received Status -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm text-gray-500">{{ t('Bedrag') }}</div>
+            <div class="text-2xl font-bold text-gray-900">€{{ "%.2f"|format(payment.amount) }}</div>
+          </div>
+          <!-- Ontvangen indicator voor bank transfers -->
+          {% if payment.method == 'bank_transfer' %}
+            {% if payment.received %}
+            <!-- Ontvangen: toon groen vinkje -->
+            <form action="{{ url_for('main.payment_toggle_received', payment_id=payment.payment_id) }}" method="POST" class="inline-block" onsubmit="return confirmToggle(event, {{ payment.received|tojson }})">
+              <button type="submit" class="flex flex-col items-center gap-1 text-green-600 hover:text-green-700 transition-colors" title="{{ t('Klik om te markeren als niet-ontvangen') }}">
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-xs font-medium text-green-700">{{ t('Ontvangen') }}</span>
+              </button>
+            </form>
+            {% else %}
+            <!-- Niet ontvangen: toon checkbox -->
+            <form action="{{ url_for('main.payment_toggle_received', payment_id=payment.payment_id) }}" method="POST" class="inline-block">
+              <label class="flex flex-col items-center gap-1 cursor-pointer" title="{{ t('Klik om te markeren als ontvangen') }}">
+                <input type="checkbox" onchange="this.form.submit()" class="w-6 h-6 text-green-600 border-gray-300 rounded focus:ring-2 focus:ring-green-500 cursor-pointer">
+                <span class="text-xs font-medium text-amber-700">{{ t('Wacht') }}</span>
+              </label>
+            </form>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 pt-4 border-t border-gray-100">
+        <a href="{{ url_for('main.members_list') }}" class="flex-1 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium text-center">
+          {{ t('Lid bekijken') }}
+        </a>
+        <button onclick="confirmDeletePayment('{{ payment.payment_id }}')" class="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+          {{ t('Verwijderen') }}
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="bg-white rounded-xl p-12 shadow-sm border border-gray-100 text-center">
+    <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+      <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+      </svg>
+    </div>
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ t('Geen betalingen gevonden') }}</h3>
+    <p class="text-gray-500 mb-6">{{ t('Begin door een nieuwe betaling te registreren') }}</p>
+    <a href="{{ url_for('main.payment_new') }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all shadow-lg hover:shadow-xl" style="background: linear-gradient(135deg, #ee6c4d 0%, #d55a3e 100%);">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      {{ t('Nieuwe betaling registreren') }}
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleDropdown(event, dropdownId) {
+  event.stopPropagation();
+  const dropdown = document.getElementById(dropdownId);
+  const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
+  allDropdowns.forEach(d => {
+    if (d.id !== dropdownId) d.classList.add('hidden');
+  });
+  dropdown.classList.toggle('hidden');
+}
+
+function confirmDeletePayment(paymentId) {
+  if (confirm('{{ t("Weet je zeker dat je deze betaling wilt verwijderen?") }}')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/payments/${paymentId}/delete`;
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function confirmToggle(event, currentStatus) {
+  // Als het momenteel niet ontvangen is (false) en je vinkt aan, geen confirmatie nodig
+  if (!currentStatus) {
+    return true; // Laat form submitten
+  }
+  
+  // Als het momenteel wel ontvangen is (true) en je vinkt uit, vraag confirmatie
+  if (confirm('{{ t("Weet je zeker dat je dit wilt markeren als niet-ontvangen?") }}')) {
+    return true;
+  } else {
+    event.preventDefault();
+    return false;
+  }
+}
+
+document.addEventListener('click', function() {
+  document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
+});
+</script>
+
+{% endblock %}

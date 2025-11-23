@@ -1,89 +1,294 @@
-/* Custom styles layered on top of Tailwind (CDN). */
-/* Keep it lightweight and utility-friendly. */
+/* ============================================
+   Modern Professional Styles voor OpWielekes
+   Fietsverhuur Management System
+   ============================================ */
 
+/* CSS Custom Properties - Professioneel kleurenpalet */
 :root {
-  --brand: #ee6c4d; /* OpWielekes orange */
-  --brand-700: #d85a3a; /* darker orange */
-  --brand-800: #c04a2a; /* even darker */
-  --ink: #1f2937; /* gray-800 */
-  --muted: #6b7280; /* gray-500/600 */
-  --ring: rgba(238, 108, 77, 0.25);
+  /* Brand Colors - OpWielekes Orange met volledige scale */
+  --brand-50: #fef5f1;
+  --brand-100: #fde8df;
+  --brand-200: #fbd0c4;
+  --brand-300: #f7aa9a;
+  --brand-400: #f17a60;
+  --brand-500: #ee6c4d; /* Primary brand */
+  --brand-600: #d85a3a;
+  --brand-700: #b84a2f;
+  --brand-800: #973d28;
+  --brand-900: #7d3524;
+  
+  /* Neutral Colors - Modern gray scale */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  
+  /* Semantic Colors - Voor status indicatie */
+  --success-50: #ecfdf5;
+  --success-500: #10b981;
+  --success-700: #047857;
+  
+  --warning-50: #fffbeb;
+  --warning-500: #f59e0b;
+  --warning-700: #b45309;
+  
+  --danger-50: #fef2f2;
+  --danger-500: #ef4444;
+  --danger-700: #b91c1c;
+  
+  --info-50: #eff6ff;
+  --info-500: #3b82f6;
+  --info-700: #1d4ed8;
+  
+  /* Alias variabelen voor eenvoudiger gebruik */
+  --brand: var(--brand-500);
+  --brand-hover: var(--brand-600);
+  --brand-active: var(--brand-700);
+  
+  --text-primary: var(--gray-900);
+  --text-secondary: var(--gray-600);
+  --text-muted: var(--gray-500);
+  
+  --border-color: var(--gray-200);
+  --border-hover: var(--gray-300);
+  
+  --bg-base: var(--gray-50);
+  --bg-surface: #ffffff;
+  
+  /* Shadows - Modern en subtiel */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  
+  /* Focus ring - Voor toegankelijkheid */
+  --ring-color: rgba(238, 108, 77, 0.3);
+  --ring-offset: 2px;
+  
+  /* Border Radius - Consistente afronding */
+  --radius-sm: 0.375rem;
+  --radius: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  
+  /* Transitions - Smooth animaties */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Smooth transitions for interactive elements */
-* { -webkit-tap-highlight-color: transparent; }
+/* ============================================
+   Base Styles - Fundamentele opmaak
+   ============================================ */
 
-html { scroll-behavior: smooth; }
+/* Reset en basis gedrag */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 body {
-  color: var(--ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  line-height: 1.6;
 }
 
-/* Navbar polish */
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  backdrop-filter: saturate(1.2) blur(4px);
+/* Typography - Moderne teksthiërarchie */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-/* Reusable card component */
+h1 { font-size: 2.25rem; } /* 36px */
+h2 { font-size: 1.875rem; } /* 30px */
+h3 { font-size: 1.5rem; } /* 24px */
+h4 { font-size: 1.25rem; } /* 20px */
+h5 { font-size: 1.125rem; } /* 18px */
+h6 { font-size: 1rem; } /* 16px */
+
+p {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Links - Subtle maar duidelijk */
+a {
+  color: var(--brand);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--brand-hover);
+}
+
+/* ============================================
+   Components - Herbruikbare UI elementen
+   ============================================ */
+
+/* Card Component - Modern en veelzijdig */
 .card {
-  background: #fff;
-  border: 1px solid #eef2f7;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 16px rgba(2, 6, 23, 0.06);
-  /* Ensures inner table/header backgrounds are clipped to rounded corners */
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  transition: transform var(--transition-base), 
+              box-shadow var(--transition-base), 
+              border-color var(--transition-base);
 }
+
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.1);
-  border-color: #e5e7eb;
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
-/* Disable card hover lift for table cards so entire table doesn't "jump" */
+/* Table cards - Geen hover lift om springen te voorkomen */
+.card.table-card {
+  overflow-x: auto;
+}
+
 .card.table-card:hover {
   transform: none;
-  box-shadow: 0 4px 16px rgba(2, 6, 23, 0.06);
-  border-color: #eef2f7;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-color);
 }
 
-/* Buttons */
+/* Card header - Voor gestructureerde cards */
+.card-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--gray-50);
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--gray-50);
+}
+
+/* Button Component - Modern en toegankelijk */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--radius);
   font-weight: 600;
-  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 120ms ease;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
 }
-.btn:hover { transform: translateY(-1px); box-shadow: 0 2px 0 rgba(0,0,0,0.04); }
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-color);
+  outline-offset: var(--ring-offset);
 }
-.btn:active { transform: translateY(1px); }
 
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled,
+.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Button Variants */
 .btn-primary {
-  color: #fff;
   background: var(--brand);
-  border: none;
-}
-.btn-primary:hover { 
-  background: var(--brand-700);
-  filter: brightness(1.05);
+  color: white;
+  border-color: var(--brand);
 }
 
-/* Small button variant for dense table actions */
+.btn-primary:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+.btn-secondary {
+  background: var(--gray-100);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--gray-200);
+}
+
+.btn-success {
+  background: var(--success-500);
+  color: white;
+  border-color: var(--success-500);
+}
+
+.btn-success:hover {
+  background: var(--success-700);
+}
+
+.btn-danger {
+  background: var(--danger-500);
+  color: white;
+  border-color: var(--danger-500);
+}
+
+.btn-danger:hover {
+  background: var(--danger-700);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
+.btn-outline:hover {
+  background: var(--brand-50);
+}
+
+/* Button Sizes */
 .btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
 }
 
 /* Icon-only buttons for tight action bars */

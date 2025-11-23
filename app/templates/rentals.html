@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+    <h1 class="text-3xl font-bold text-gray-900">{{ t('Actieve verhuringen') }}</h1>
+    <a href="{{ url_for('main.inventory') }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all shadow-lg hover:shadow-xl" style="background: linear-gradient(135deg, #ee6c4d 0%, #d55a3e 100%);">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      {{ t('Nieuwe verhuring registreren') }}
+    </a>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <!-- Card 1: Total Active -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1">{{ total_active }}</div>
+      <div class="text-sm text-gray-500">{{ t('Totaal actieve verhuringen') }}</div>
+    </div>
+
+    <!-- Card 2: Overdue -->
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+          <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-3xl font-bold text-gray-900 mb-1">{{ overdue_count }}</div>
+      <div class="text-sm text-gray-500">{{ t('Betaling mist') }}</div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+    <form method="get" action="{{ url_for('main.rentals_list') }}" class="flex gap-4">
+      <!-- Status Filter -->
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Status') }}</label>
+        <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>{{ t('Alle') }}</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{{ t('Actief') }}</option>
+          <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>{{ t('Beëindigd') }}</option>
+        </select>
+      </div>
+
+      <!-- Bike Type Filter -->
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Fietstype') }}</label>
+        <select name="bike_type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">{{ t('Alle types') }}</option>
+          {% for type in bike_types %}
+          <option value="{{ type }}" {% if bike_type == type %}selected{% endif %}>{{ type }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Search -->
+      <div class="flex-[2]">
+        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('Zoek op naam kind of ouder') }}</label>
+        <div class="flex gap-2">
+          <input type="text" name="search" value="{{ search_query }}" placeholder="{{ t('Zoek op naam kind of ouder') }}" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table / Cards -->
+  {% if rentals_data %}
+  <!-- Desktop Table -->
+  <div class="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Fiets') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Kind') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Ouder') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Startdatum') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Status') }}</th>
+          <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for rental, bike, child, member in rentals_data %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <!-- Bike -->
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+              </div>
+              <div>
+                <a href="{{ url_for('main.inventory') }}" class="font-medium text-gray-900 hover:text-blue-600">{{ bike.model or bike.brand }}</a>
+                {% if bike.type %}
+                <div class="text-xs text-gray-500">{{ bike.type }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+
+          <!-- Child -->
+          <td class="px-6 py-4">
+            <div class="font-medium text-gray-900">{{ child.first_name }} {{ child.last_name }}</div>
+            <div class="text-xs text-gray-500">{{ child.birth_date.strftime('%d/%m/%Y') if child.birth_date else '' }}</div>
+          </td>
+
+          <!-- Parent -->
+          <td class="px-6 py-4">
+            <a href="{{ url_for('main.members_list') }}" class="font-medium text-gray-900 hover:text-blue-600">{{ member.first_name }} {{ member.last_name }}</a>
+            <div class="text-xs text-gray-500">{{ member.email or '' }}</div>
+          </td>
+
+          <!-- Start Date -->
+          <td class="px-6 py-4 text-gray-700">
+            {{ rental.start_date.strftime('%d/%m/%Y') if rental.start_date else '-' }}
+          </td>
+
+          <!-- Status -->
+          <td class="px-6 py-4">
+            {% if rental.status == 'active' %}
+              {% if member.last_payment and (now - member.last_payment).days > 30 %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                {{ t('Betaling te laat') }}
+              </span>
+              {% else %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                {{ t('Actief') }}
+              </span>
+              {% endif %}
+            {% elif rental.status == 'returned' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              {{ t('Beëindigd') }}
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td class="px-6 py-4 text-right">
+            <div class="relative inline-block text-left">
+              <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleDropdown(event, 'dropdown-{{ rental.rental_id }}')">
+                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                </svg>
+              </button>
+              <div id="dropdown-{{ rental.rental_id }}" class="hidden absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                <div class="py-1">
+                  <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    {{ t('Verhuring bekijken') }}
+                  </a>
+                  <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    {{ t('Verhuring wijzigen') }}
+                  </a>
+                  <a href="{{ url_for('main.members_payment', member_id=member.member_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    {{ t('Betalingsgeschiedenis') }}
+                  </a>
+                  {% if rental.status == 'active' %}
+                  <hr class="my-1">
+                  <button onclick="confirmEndRental({{ rental.rental_id }})" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    {{ t('Verhuring beëindigen') }}
+                  </button>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="md:hidden space-y-4">
+    {% for rental, bike, child, member in rentals_data %}
+    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <!-- Bike & Child -->
+      <div class="flex items-start gap-4 mb-4">
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-gray-900">{{ bike.model or bike.brand }}</div>
+          <div class="text-sm text-gray-500">{{ bike.type or '' }}</div>
+          <div class="text-sm font-medium text-gray-700 mt-1">{{ child.first_name }} {{ child.last_name }}</div>
+        </div>
+        <!-- Status Badge -->
+        {% if rental.status == 'active' %}
+          {% if member.last_payment and (now - member.last_payment).days > 30 %}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            {{ t('Betaling te laat') }}
+          </span>
+          {% else %}
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            {{ t('Actief') }}
+          </span>
+          {% endif %}
+        {% elif rental.status == 'returned' %}
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          {{ t('Beëindigd') }}
+        </span>
+        {% endif %}
+      </div>
+
+      <!-- Details -->
+      <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+        <div>
+          <div class="text-gray-500">{{ t('Ouder') }}</div>
+          <div class="font-medium text-gray-900">{{ member.first_name }} {{ member.last_name }}</div>
+        </div>
+        <div>
+          <div class="text-gray-500">{{ t('Startdatum') }}</div>
+          <div class="font-medium text-gray-900">{{ rental.start_date.strftime('%d/%m/%Y') if rental.start_date else '-' }}</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 pt-4 border-t border-gray-100">
+        <button class="flex-1 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+          {{ t('Verhuring bekijken') }}
+        </button>
+        {% if rental.status == 'active' %}
+        <button onclick="confirmEndRental({{ rental.rental_id }})" class="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+          {{ t('Beëindigen') }}
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="bg-white rounded-xl p-12 shadow-sm border border-gray-100 text-center">
+    <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+      <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+    </div>
+    <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ t('Geen actieve verhuringen') }}</h3>
+    <p class="text-gray-500 mb-6">{{ t('Begin door een nieuwe verhuring te registreren') }}</p>
+    <a href="{{ url_for('main.rent_form') }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      {{ t('+ Nieuwe verhuring registreren') }}
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleDropdown(event, id) {
+  event.stopPropagation();
+  const dropdown = document.getElementById(id);
+  const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
+  allDropdowns.forEach(d => {
+    if (d.id !== id) d.classList.add('hidden');
+  });
+  dropdown.classList.toggle('hidden');
+}
+
+function confirmEndRental(rentalId) {
+  if (confirm('{{ t("Weet je zeker dat je deze verhuring wilt beëindigen?") }}')) {
+    // TODO: Implement end rental endpoint
+    window.location.href = `/rentals/${rentalId}/end`;
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function() {
+  const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
+  allDropdowns.forEach(d => d.classList.add('hidden'));
+});
+</script>
+
+{% endblock %}

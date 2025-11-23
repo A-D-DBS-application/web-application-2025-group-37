@@ -3,8 +3,64 @@ from datetime import datetime, date
 from app.extensions import db
 from app.models import Member, Child, User, Bike, Rental, Payment, Item
 from sqlalchemy import text
+from functools import wraps
 
 main = Blueprint('main', __name__)
+
+# ============================================
+# Security Decorators - Rolgebaseerde toegangscontrole
+# ============================================
+
+def login_required(f):
+    """
+    Decorator die controleert of gebruiker is ingelogd.
+    Redirect naar login pagina als niet ingelogd.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Je moet inloggen om deze pagina te bekijken.', 'warning')
+            return redirect(url_for('main.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def role_required(*allowed_roles):
+    """
+    Decorator die controleert of gebruiker één van de toegestane rollen heeft.
+    Gebruik: @role_required('depot_manager', 'admin')
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                flash('Je moet inloggen om deze pagina te bekijken.', 'warning')
+                return redirect(url_for('main.login'))
+            
+            user = User.query.get(session['user_id'])
+            if not user:
+                session.clear()
+                flash('Gebruiker niet gevonden. Log opnieuw in.', 'error')
+                return redirect(url_for('main.login'))
+            
+            if user.role not in allowed_roles:
+                flash('Je hebt geen toegang tot deze pagina.', 'error')
+                return redirect(url_for('main.dashboard'))
+            
+            # Store user role in session for template access
+            session['user_role'] = user.role
+            session['user_name'] = f"{user.first_name} {user.last_name}"
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def depot_access_required(f):
+    """Shortcut decorator voor Depot Manager toegang"""
+    return role_required('depot_manager', 'admin')(f)
+
+def finance_access_required(f):
+    """Shortcut decorator voor Finance Manager toegang"""
+    return role_required('finance_manager', 'admin')(f)
 
 # Dummy data (je kunt dit later koppelen aan een echte DB)
 bikes = [
@@ -21,6 +77,7 @@ def home():
     return render_template('login.html')
 
 @main.route('/inventory')
+@login_required
 def inventory():
     bike_base = Bike.query.filter_by(archived=False)
     available_bikes = bike_base.filter_by(status='available').order_by(Bike.created_at.desc()).all()
@@ -75,20 +132,68 @@ def login_required(view):
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
-    # Seed default user if none
+    """
+    Login route met rolgebaseerde authenticatie.
+    Ondersteunt Finance Manager en Depot Manager rollen.
+    """
+    # Seed default users if database is empty
     if not User.query.first():
-        admin = User(first_name='Admin', last_name='User', email='admin@example.com')
-        admin.set_password('admin')
-        db.session.add(admin)
+        # Create default Depot Manager
+        depot_mgr = User(
+            first_name='Depot',
+            last_name='Manager',
+            email='depot@opwielekes.be',
+            role='depot_manager'
+        )
+        depot_mgr.set_password('depot123')
+        
+        # Create default Finance Manager
+        finance_mgr = User(
+            first_name='Finance',
+            last_name='Manager',
+            email='finance@opwielekes.be',
+            role='finance_manager'
+        )
+        finance_mgr.set_password('finance123')
+        
+        # Create default Admin
+        admin = User(
+            first_name='Admin',
+            last_name='User',
+            email='admin@opwielekes.be',
+            role='admin'
+        )
+        admin.set_password('admin123')
+        
+        db.session.add_all([depot_mgr, finance_mgr, admin])
         db.session.commit()
+    
     if request.method == 'POST':
-        email = request.form.get('email','').strip()
-        password = request.form.get('password','')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        
+        # Validatie: email en wachtwoord verplicht
+        if not email or not password:
+            flash('Vul alle velden in.', 'error')
+            return render_template('login.html')
+        
+        # Zoek gebruiker
         user = User.query.filter_by(email=email).first()
+        
         if user and user.check_password(password):
+            # Inloggen geslaagd - sla gebruikersgegevens op in sessie
             session['user_id'] = user.user_id
+            session['user_role'] = user.role
+            session['user_name'] = f"{user.first_name} {user.last_name}"
+            session['user_email'] = user.email
+            
+            flash(f'Welkom, {user.first_name}!', 'success')
+            
+            # Iedereen gaat naar dashboard
             return redirect(url_for('main.dashboard'))
-        flash('Ongeldige inloggegevens', 'error')
+        else:
+            flash('Ongeldige inloggegevens.', 'error')
+    
     return render_template('login.html')
 
 
@@ -177,6 +282,91 @@ def members_children_assign(member_id, child_id):
     return redirect(url_for('main.members_children', member_id=member.member_id))
 
 
+@main.route('/rentals')
+@login_required
+def rentals_list():
+    """Rentals overview page with filters"""
+    from sqlalchemy import func
+    from datetime import timedelta
+    
+    # Calculate date for overdue payments (30 days ago)
+    thirty_days_ago = date.today() - timedelta(days=30)
+    
+    # Get filter parameters
+    status_filter = request.args.get('status', 'all')
+    bike_type = request.args.get('bike_type', '')
+    search_query = request.args.get('search', '').strip()
+    
+    # Base query with joins
+    query = db.session.query(
+        Rental,
+        Bike,
+        Child,
+        Member
+    ).join(Bike, Rental.bike_id == Bike.bike_id)\
+     .join(Child, Rental.child_id == Child.child_id)\
+     .join(Member, Child.member_id == Member.member_id)
+    
+    # Apply status filter
+    if status_filter == 'active':
+        query = query.filter(Rental.status == 'active')
+    elif status_filter == 'returned':
+        query = query.filter(Rental.status == 'returned')
+    
+    # Apply bike type filter
+    if bike_type:
+        query = query.filter(Bike.type == bike_type)
+    
+    # Apply search filter
+    if search_query:
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            (Child.first_name.ilike(search_pattern)) |
+            (Child.last_name.ilike(search_pattern)) |
+            (Member.first_name.ilike(search_pattern)) |
+            (Member.last_name.ilike(search_pattern))
+        )
+    
+    # Get results
+    rentals_data = query.order_by(Rental.start_date.desc()).all()
+    
+    # Calculate stats - simple counts
+    total_active = db.session.query(func.count(Rental.rental_id))\
+        .filter(Rental.status == 'active').scalar() or 0
+    
+    total_returned = db.session.query(func.count(Rental.rental_id))\
+        .filter(Rental.status == 'returned').scalar() or 0
+    
+    # Calculate overdue in Python to avoid SQL issues
+    overdue_count = 0
+    for rental, bike, child, member in rentals_data:
+        if rental.status == 'active' and member.last_payment:
+            days_since_payment = (date.today() - member.last_payment).days
+            if days_since_payment > 30:
+                overdue_count += 1
+    
+    # Get unique bike types for filter
+    bike_types = db.session.query(Bike.type)\
+        .filter(Bike.type.isnot(None))\
+        .distinct()\
+        .order_by(Bike.type)\
+        .all()
+    bike_types = [t[0] for t in bike_types if t[0]]
+    
+    return render_template('rentals.html',
+        rentals_data=rentals_data,
+        total_active=total_active,
+        total_returned=total_returned,
+        overdue_count=overdue_count,
+        bike_types=bike_types,
+        status_filter=status_filter,
+        bike_type=bike_type,
+        search_query=search_query,
+        now=date.today(),
+        thirty_days_ago=thirty_days_ago
+    )
+
+
 @main.route('/dashboard')
 @login_required
 def dashboard():
@@ -236,6 +426,36 @@ def dashboard():
     # === CARD 4: Betalingen (uitgebreid) ===
     payments_this_month = db.session.query(func.sum(Payment.amount)).filter(
         func.date(Payment.paid_at) >= month_start
+    ).scalar() or 0
+    
+    # Total payments count this month
+    payments_count_this_month = Payment.query.filter(
+        func.date(Payment.paid_at) >= month_start
+    ).count()
+    
+    # Payments today
+    payments_today = db.session.query(func.sum(Payment.amount)).filter(
+        func.date(Payment.paid_at) == today
+    ).scalar() or 0
+    
+    payments_count_today = Payment.query.filter(
+        func.date(Payment.paid_at) == today
+    ).count()
+    
+    # Payment method breakdown this month
+    cash_payments = db.session.query(func.sum(Payment.amount)).filter(
+        func.date(Payment.paid_at) >= month_start,
+        Payment.method == 'cash'
+    ).scalar() or 0
+    
+    card_payments = db.session.query(func.sum(Payment.amount)).filter(
+        func.date(Payment.paid_at) >= month_start,
+        Payment.method == 'card'
+    ).scalar() or 0
+    
+    bank_payments = db.session.query(func.sum(Payment.amount)).filter(
+        func.date(Payment.paid_at) >= month_start,
+        Payment.method == 'bank_transfer'
     ).scalar() or 0
     
     # Outstanding amount (mock - would need better tracking)
@@ -568,6 +788,12 @@ def dashboard():
         children_with_bike_percentage=children_with_bike_percentage,
         # Card 4: Payments (extended)
         payments_this_month=payments_this_month,
+        payments_count_this_month=payments_count_this_month,
+        payments_today=payments_today,
+        payments_count_today=payments_count_today,
+        cash_payments=cash_payments,
+        card_payments=card_payments,
+        bank_payments=bank_payments,
         overdue_members=overdue_members_count,
         overdue_amount=overdue_amount,
         last_payment=last_payment,
@@ -927,4 +1153,136 @@ def members_delete(member_id):
     db.session.commit()
     flash('Lid verwijderd', 'info')
     return redirect(url_for('main.members_list'))
+
+@main.route('/payments')
+@login_required
+def payments_list():
+    """Payments overview page with filters"""
+    from sqlalchemy import func
+    from datetime import timedelta
+    
+    # Get filter parameters
+    method_filter = request.args.get('method', 'all')
+    period_filter = request.args.get('period', 'all')
+    search_query = request.args.get('search', '').strip()
+    
+    # Base query with joins
+    query = db.session.query(Payment, Member)\
+        .join(Member, Payment.member_id == Member.member_id)
+    
+    # Apply method filter
+    if method_filter != 'all':
+        query = query.filter(Payment.method == method_filter)
+    
+    # Apply period filter
+    today = date.today()
+    if period_filter == 'today':
+        query = query.filter(Payment.paid_at == today)
+    elif period_filter == 'week':
+        week_start = today - timedelta(days=today.weekday())
+        query = query.filter(Payment.paid_at >= week_start)
+    elif period_filter == 'month':
+        month_start = today.replace(day=1)
+        query = query.filter(Payment.paid_at >= month_start)
+    
+    # Apply search filter
+    if search_query:
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            (Member.first_name.ilike(search_pattern)) |
+            (Member.last_name.ilike(search_pattern))
+        )
+    
+    # Get results
+    payments_data = query.order_by(Payment.paid_at.desc()).all()
+    
+    # Calculate stats - alleen ontvangen betalingen meetellen
+    # Voor cash en card: altijd ontvangen (received = True by default)
+    # Voor bank: alleen als received = True
+    total_payments = db.session.query(func.sum(Payment.amount))\
+        .filter(Payment.received == True).scalar() or 0
+    
+    cash_payments = db.session.query(func.sum(Payment.amount))\
+        .filter(Payment.method == 'cash', Payment.received == True).scalar() or 0
+    
+    card_payments = db.session.query(func.sum(Payment.amount))\
+        .filter(Payment.method == 'card', Payment.received == True).scalar() or 0
+    
+    bank_payments = db.session.query(func.sum(Payment.amount))\
+        .filter(Payment.method == 'bank_transfer', Payment.received == True).scalar() or 0
+    
+    return render_template('payments.html',
+        payments_data=payments_data,
+        total_payments=total_payments,
+        cash_payments=cash_payments,
+        card_payments=card_payments,
+        bank_payments=bank_payments,
+        method_filter=method_filter,
+        period_filter=period_filter,
+        search_query=search_query
+    )
+
+@main.route('/payments/new', methods=['GET', 'POST'])
+@login_required
+def payment_new():
+    """New payment form"""
+    if request.method == 'POST':
+        member_id = request.form.get('member_id')
+        amount = float(request.form.get('amount', 0))
+        method = request.form.get('method', 'cash')
+        paid_at_str = request.form.get('paid_at')
+        received = request.form.get('received') == 'true'  # Checkbox waarde
+        
+        # Voor cash en card is received altijd True, voor bank_transfer hangt het af van checkbox
+        if method in ['cash', 'card']:
+            received = True
+        
+        payment = Payment(
+            member_id=member_id,
+            amount=amount,
+            method=method,
+            paid_at=datetime.strptime(paid_at_str, '%Y-%m-%d').date() if paid_at_str else date.today(),
+            received=received
+        )
+        
+        # Update member's last_payment date
+        member = Member.query.get(member_id)
+        if member:
+            member.last_payment = payment.paid_at
+        
+        db.session.add(payment)
+        db.session.commit()
+        flash('Betaling geregistreerd', 'success')
+        return redirect(url_for('main.payments_list'))
+    
+    members = Member.query.filter_by(status='active').order_by(Member.last_name).all()
+    return render_template('payment_form_new.html', members=members, today=date.today().strftime('%Y-%m-%d'))
+
+@main.route('/payments/<payment_id>/toggle-received', methods=['POST'])
+@login_required
+def payment_toggle_received(payment_id):
+    """Toggle received status for bank transfer payment"""
+    payment = Payment.query.get_or_404(payment_id)
+    
+    # Alleen voor bank transfers
+    if payment.method == 'bank_transfer':
+        payment.received = not payment.received
+        db.session.commit()
+        
+        if payment.received:
+            flash('Betaling gemarkeerd als ontvangen', 'success')
+        else:
+            flash('Betaling gemarkeerd als niet-ontvangen', 'info')
+    
+    return redirect(url_for('main.payments_list'))
+
+@main.route('/payments/<payment_id>/delete', methods=['POST'])
+@login_required
+def payment_delete(payment_id):
+    """Delete a payment"""
+    payment = Payment.query.get_or_404(payment_id)
+    db.session.delete(payment)
+    db.session.commit()
+    flash('Betaling verwijderd', 'info')
+    return redirect(url_for('main.payments_list'))
 

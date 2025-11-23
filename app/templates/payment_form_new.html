@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-2xl mx-auto">
+  <div class="mb-6">
+    <a href="{{ url_for('main.payments_list') }}" class="inline-flex items-center text-gray-600 hover:text-gray-900">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      {{ t('Terug naar betalingen') }}
+    </a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ t('Nieuwe betaling registreren') }}</h1>
+
+    <form method="POST" action="{{ url_for('main.payment_new') }}">
+      <!-- Member Selection -->
+      <div class="mb-6">
+        <label for="member_id" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ t('Lid') }} <span class="text-red-500">*</span>
+        </label>
+        <select id="member_id" name="member_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">{{ t('Selecteer een lid') }}</option>
+          {% for member in members %}
+          <option value="{{ member.member_id }}">{{ member.first_name }} {{ member.last_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Amount -->
+      <div class="mb-6">
+        <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ t('Bedrag') }} (€) <span class="text-red-500">*</span>
+        </label>
+        <input type="number" id="amount" name="amount" step="0.01" min="0" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <!-- Payment Method -->
+      <div class="mb-6">
+        <label for="method" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ t('Betaalmethode') }} <span class="text-red-500">*</span>
+        </label>
+        <select id="method" name="method" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="toggleReceivedCheckbox()">
+          <option value="cash">{{ t('Contant') }}</option>
+          <option value="card">{{ t('Kaart') }}</option>
+          <option value="bank_transfer">{{ t('Bankoverschrijving') }}</option>
+        </select>
+      </div>
+
+      <!-- Received Checkbox (alleen voor bank transfers) -->
+      <div id="receivedCheckboxContainer" class="mb-6 hidden">
+        <div class="flex items-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <input type="checkbox" id="received" name="received" value="true" class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+          <label for="received" class="ml-3 text-sm font-medium text-gray-700">
+            {{ t('Bedrag is ontvangen') }}
+          </label>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">
+          {{ t('Vink dit aan als het bedrag reeds op de rekening is ontvangen') }}
+        </p>
+      </div>
+
+      <!-- Payment Date -->
+      <div class="mb-6">
+        <label for="paid_at" class="block text-sm font-medium text-gray-700 mb-2">
+          {{ t('Betaaldatum') }}
+        </label>
+        <input type="date" id="paid_at" name="paid_at" value="{{ today }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-4 pt-6 border-t">
+        <button type="submit" class="flex-1 px-6 py-3 rounded-lg text-white font-semibold transition-all shadow-lg hover:shadow-xl" style="background: linear-gradient(135deg, #ee6c4d 0%, #d55a3e 100%);">
+          {{ t('Betaling opslaan') }}
+        </button>
+        <a href="{{ url_for('main.payments_list') }}" class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-center font-semibold">
+          {{ t('Annuleren') }}
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleReceivedCheckbox() {
+  const methodSelect = document.getElementById('method');
+  const receivedContainer = document.getElementById('receivedCheckboxContainer');
+  const receivedCheckbox = document.getElementById('received');
+  
+  if (methodSelect.value === 'bank_transfer') {
+    receivedContainer.classList.remove('hidden');
+  } else {
+    receivedContainer.classList.add('hidden');
+    receivedCheckbox.checked = false;
+  }
+}
+
+// Check initial state on page load
+document.addEventListener('DOMContentLoaded', function() {
+  toggleReceivedCheckbox();
+});
+</script>
+
+{% endblock %}
