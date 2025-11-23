@@ -163,6 +163,7 @@ a:hover {
 /* Table cards - Geen hover lift om springen te voorkomen */
 .card.table-card {
   overflow-x: auto;
+  overflow-y: visible;
 }
 
 .card.table-card:hover {
@@ -383,6 +384,7 @@ a:hover {
 .members-toolbar { position: sticky; top: 70px; z-index: 30; background: #fff; padding: .75rem 1rem; border: 1px solid #e5e7eb; border-radius: .75rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; box-shadow: 0 4px 12px rgba(2,6,23,0.04); }
 .members-toolbar .grow { flex: 1 1 240px; }
 .view-toggle button { font-size: .75rem; padding: .4rem .75rem; }
+.members-table-wrapper { overflow: visible !important; }
 .dropdown { position: relative; }
 .dropdown-menu { position: absolute; right: 0; top: 110%; min-width: 180px; background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; box-shadow: 0 10px 28px rgba(2,6,23,.12); padding: .5rem 0; display: none; z-index: 60; }
 .dropdown-menu.show { display: block; animation: fadeIn 140ms ease; }

@@ -3,7 +3,10 @@
 
 <div class="flex items-center justify-between mb-4">
   <h2 class="section-title text-2xl md:text-3xl font-semibold">{{ t('Fietsen') }}</h2>
-  <a href="{{ url_for('main.bikes_new') }}" class="btn btn-primary">{{ t('Nieuwe fiets') }}</a>
+  <div class="flex gap-2">
+    <button style="background: red; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold;">TEST BUTTON - PAGINA IS UPDATED</button>
+    <a href="{{ url_for('main.bikes_new') }}" class="btn btn-primary">{{ t('Nieuwe fiets') }}</a>
+  </div>
   </div>
 
 {% set status_labels = {'available': t('beschikbaar'), 'rented': t('verhuurd'), 'repair': t('in herstelling')} %}
@@ -40,8 +43,8 @@
               </button>
             </form>
             <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="shrink-0" onsubmit="return confirmDeleteBike(event, '{{ b.name }}');">
-              <button class="icon-btn icon-btn-danger tooltip" data-tooltip="{{ t('Verwijderen') }}" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium">
+                🗑️ Verwijder
               </button>
             </form>
             <a class="icon-btn icon-btn-primary tooltip shrink-0" data-tooltip="{{ t('Bewerken') }}" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="{{ t('Bewerken') }}" title="{{ t('Bewerken') }}">
@@ -88,8 +91,8 @@
               </button>
             </form>
             <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="shrink-0" onsubmit="return confirmDeleteBike(event, '{{ b.name }}');">
-              <button class="icon-btn icon-btn-danger tooltip" data-tooltip="{{ t('Verwijderen') }}" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium">
+                🗑️ Verwijder
               </button>
             </form>
             <a class="icon-btn icon-btn-primary tooltip shrink-0" data-tooltip="{{ t('Bewerken') }}" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="{{ t('Bewerken') }}" title="{{ t('Bewerken') }}">
@@ -136,8 +139,8 @@
               </button>
             </form>
             <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="shrink-0" onsubmit="return confirmDeleteBike(event, '{{ b.name }}');">
-              <button class="icon-btn icon-btn-danger tooltip" data-tooltip="{{ t('Verwijderen') }}" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium">
+                🗑️ Verwijder
               </button>
             </form>
             <a class="icon-btn icon-btn-primary tooltip shrink-0" data-tooltip="{{ t('Bewerken') }}" href="{{ url_for('main.bikes_edit', bike_id=b.bike_id) }}" aria-label="{{ t('Bewerken') }}" title="{{ t('Bewerken') }}">
