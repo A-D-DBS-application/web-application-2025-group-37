@@ -318,9 +318,16 @@ a:hover {
 /* Danger variant */
 .icon-btn-danger {
   background: #fee2e2;
-  color: #991b1b;
+  color: #dc2626;
+  transition: all var(--transition-base);
+  border: 1px solid #fecaca;
 }
-.icon-btn-danger:hover { background: #fecaca; }
+.icon-btn-danger:hover { 
+  background: #fecaca;
+  color: #dc2626;
+  transform: scale(1.05);
+  border-color: #fca5a5;
+}
 
 /* Compact row of action icons */
 .actions-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; }

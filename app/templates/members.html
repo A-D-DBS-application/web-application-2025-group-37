@@ -80,14 +80,11 @@
               <a href="{{ url_for('main.members_edit', member_id=m.member_id) }}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
                 Lid bewerken</a>
-              <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" onsubmit="return confirm('Lid verwijderen?');">
-                <button type="submit">
+              <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" onsubmit="return confirmDeleteMember(event, '{{ m.first_name }} {{ m.last_name }}', {{ vm.children_count }});">
+                <button type="submit" class="text-red-600 hover:text-red-700 hover:bg-red-50">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
-                  Verwijderen</button>
+                  {{ t('Verwijderen') }}</button>
               </form>
-              <button type="button" onclick="generateCard(this)" data-member='{"name":"{{ m.first_name }} {{ m.last_name }}","email":"{{ m.email or '' }}","phone":"{{ m.phone or '' }}"}'>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="15" r="1"/></svg>
-                Lidkaart genereren</button>
             </div>
           </div>
         </td>
@@ -133,14 +130,11 @@
           <a href="{{ url_for('main.members_edit', member_id=m.member_id) }}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
             Lid bewerken</a>
-          <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" onsubmit="return confirm('Lid verwijderen?');">
-            <button type="submit">
+          <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" onsubmit="return confirmDeleteMember(event, '{{ m.first_name }} {{ m.last_name }}', {{ vm.children_count }});">
+            <button type="submit" class="text-red-600 hover:text-red-700 hover:bg-red-50">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
-              Verwijderen</button>
+              {{ t('Verwijderen') }}</button>
           </form>
-          <button type="button" onclick="generateCard(this)" data-member='{"name":"{{ m.first_name }} {{ m.last_name }}","email":"{{ m.email or '' }}","phone":"{{ m.phone or '' }}"}'>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="15" r="1"/></svg>
-            Lidkaart genereren</button>
         </div>
       </div>
     </div>
@@ -221,14 +215,23 @@ document.addEventListener('click', e=>{
 btnTable.addEventListener('click',()=>{ tableWrapper.style.display='block'; cardsContainer.style.display='none'; });
 btnCards.addEventListener('click',()=>{ tableWrapper.style.display='none'; cardsContainer.style.display='grid'; });
 
-function generateCard(el){
-  const data = JSON.parse(el.getAttribute('data-member'));
-  const w = window.open('', '_blank','width=400,height=300');
-  w.document.write(`<html><head><title>Lidkaart</title><style>body{font-family:Arial;padding:20px;} .card{border:1px solid #ccc;border-radius:10px;padding:16px;} h2{margin-top:0;} .small{color:#555;font-size:12px;}</style></head><body><div class='card'><h2>${data.name}</h2><div class='small'>Email: ${data.email||'-'}</div><div class='small'>Tel: ${data.phone||'-'}</div></div></body></html>`);
-  w.document.close();
-  w.focus();
-}
-
 applyFilters();
+
+function confirmDeleteMember(event, memberName, childrenCount) {
+  event.preventDefault();
+  let message = '{{ t("Weet je zeker dat je dit lid wilt verwijderen?") }}\n\n' + memberName;
+  
+  if (childrenCount > 0) {
+    message += '\n\n⚠️ {{ t("Let op: Dit lid heeft") }} ' + childrenCount + ' {{ t("kind(eren) geregistreerd.") }}';
+    message += '\n{{ t("Deze worden ook verwijderd!") }}';
+  }
+  
+  message += '\n\n{{ t("Deze actie kan niet ongedaan gemaakt worden.") }}';
+  
+  if (confirm(message)) {
+    event.target.submit();
+  }
+  return false;
+}
 </script>
 {% endblock %}
