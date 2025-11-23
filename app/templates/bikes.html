@@ -12,7 +12,7 @@
 {% set status_labels = {'available': t('beschikbaar'), 'rented': t('verhuurd'), 'repair': t('in herstelling')} %}
 
 <!-- Beschikbare fietsen -->
-<div class="card table-card w-full p-4 mb-6">
+<div class="bikes-table-wrapper card table-card w-full p-4 mb-6">
   <h3 class="text-lg font-semibold mb-3">{{ t('Beschikbare fietsen') }}</h3>
   <table class="w-full text-left">
     <thead class="bg-gray-50">
@@ -61,7 +61,7 @@
 </div>
 
 <!-- Verhuurde fietsen -->
-<div class="card table-card w-full p-4 mb-6">
+<div class="bikes-table-wrapper card table-card w-full p-4 mb-6">
   <h3 class="text-lg font-semibold mb-3">{{ t('Verhuurde fietsen') }}</h3>
   <table class="w-full text-left">
     <thead class="bg-gray-50">
@@ -109,7 +109,7 @@
 </div>
 
 <!-- Fietsen in herstelling -->
-<div class="card table-card w-full p-4">
+<div class="bikes-table-wrapper card table-card w-full p-4">
   <h3 class="text-lg font-semibold mb-3">{{ t('Fietsen in herstelling') }}</h3>
   <table class="w-full text-left">
     <thead class="bg-gray-50">

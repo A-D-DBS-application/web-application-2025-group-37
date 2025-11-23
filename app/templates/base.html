@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OpWielekes - Fietsverhuur Management</title>
+  <title>OpWielekes - {{ t('Fietsverhuur Management') }}</title>
   
   <!-- Modern font from Google Fonts - Inter voor professional look -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,7 +62,7 @@
           <img class="h-14 w-auto transition-transform group-hover:scale-105" src="{{ static_first(['img/home/logo-' ~ current_lang ~ '.svg','img/logo-' ~ current_lang ~ '.svg'], url_for('static', filename='img/logo-' ~ current_lang ~ '.svg')) }}" alt="Logo" />
           <div class="flex flex-col">
             <span class="text-lg font-bold text-gray-900 tracking-tight">{{ current_lang == 'fr' and 'TataBicyclette' or 'OpWielekes' }}</span>
-            <span class="text-xs text-gray-500 font-medium">Verhuur Management</span>
+            <span class="text-xs text-gray-500 font-medium">{{ t('Verhuur Management') }}</span>
           </div>
         </a>
       </div>

@@ -280,6 +280,19 @@ TRANSLATIONS = {
         'Retours': 'Retours',
         'Betaling te laat': 'Paiement en retard',
         'Stopgezet': 'Arrêté',
+        
+        # Extra vertalingen voor payments pagina
+        'Ontvangen': 'Reçu',
+        'Klik om te markeren als niet-ontvangen': 'Cliquez pour marquer comme non reçu',
+        'Klik om te markeren als ontvangen': 'Cliquez pour marquer comme reçu',
+        'Weet je zeker dat je dit wilt markeren als niet-ontvangen?': 'Êtes-vous sûr de vouloir marquer ceci comme non reçu ?',
+        'Bedrag is ontvangen': 'Le montant a été reçu',
+        'Vink dit aan als het bedrag reeds op de rekening is ontvangen': 'Cochez ceci si le montant a déjà été reçu sur le compte',
+        
+        # Header/base template
+        'Verhuur Management': 'Gestion de location',
+        'Fietsverhuur Management': 'Gestion de location de vélos',
+        'OpWielekes Fietsverhuur Management System': 'Système de gestion de location de vélos OpWielekes',
     },
     'nl': {}
 }

@@ -385,6 +385,14 @@ a:hover {
 .members-toolbar .grow { flex: 1 1 240px; }
 .view-toggle button { font-size: .75rem; padding: .4rem .75rem; }
 .members-table-wrapper { overflow: visible !important; }
+
+/* Dropdown overflow fix voor alle pagina's */
+.rentals-table-wrapper { overflow: visible !important; }
+.payments-table-wrapper { overflow: visible !important; }
+.children-table-wrapper { overflow: visible !important; }
+.bikes-table-wrapper { overflow: visible !important; }
+.inventory-table-wrapper { overflow: visible !important; }
+
 .dropdown { position: relative; }
 .dropdown-menu { position: absolute; right: 0; top: 110%; min-width: 180px; background: #fff; border: 1px solid #e5e7eb; border-radius: .5rem; box-shadow: 0 10px 28px rgba(2,6,23,.12); padding: .5rem 0; display: none; z-index: 60; }
 .dropdown-menu.show { display: block; animation: fadeIn 140ms ease; }
