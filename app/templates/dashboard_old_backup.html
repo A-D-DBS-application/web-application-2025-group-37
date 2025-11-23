@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">{{ t('Dashboard') }}</h1>
+    <div class="text-sm text-gray-500">{{ t('Laatste update') }}: <span class="font-semibold">{{ t('Nu') }}</span></div>
+  </div>
+
+  <!-- === 4 MAIN METRIC CARDS === -->
+  <div class="dashboard-metrics-grid mb-8">
+    <!-- Card 1: Totale Fietsen -->
+    <div class="dashboard-metric-card glow-green">
+      <div class="metric-icon-circle bg-gradient-green">
+        <span class="text-3xl">🚲</span>
+      </div>
+      <div class="metric-content">
+        <div class="metric-main-value">{{ total_bikes }}</div>
+        <div class="metric-main-label">{{ t('Totale fietsen') }}</div>
+        <div class="metric-sub-stats">
+          <div class="metric-sub-item">
+            <span class="metric-sub-label">{{ t('Beschikbaar') }}</span>
+            <span class="metric-sub-value text-green-600">{{ available_bikes_count }}</span>
+          </div>
+          <div class="metric-sub-item">
+            <span class="metric-sub-label">{{ t('Verhuurd') }}</span>
+            <span class="metric-sub-value text-blue-600">{{ rented_bikes_count }}</span>
+          </div>
+        </div>
+        <div class="metric-trend positive">
+          ↑ {{ t('Vandaag') }} +{{ new_bikes_today }} {{ t('nieuwe ingeleverd') }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Actieve Leden -->
+    <div class="dashboard-metric-card glow-blue">
+      <div class="metric-icon-circle bg-gradient-blue">
+        <span class="text-3xl">👥</span>
+      </div>
+      <div class="metric-content">
+        <div class="metric-main-value">{{ active_members_count }}</div>
+        <div class="metric-main-label">{{ t('Actieve leden') }}</div>
+        <div class="metric-sub-stats">
+          <div class="metric-sub-item">
+            <span class="metric-sub-label">{{ t('Totaal') }}</span>
+            <span class="metric-sub-value">{{ total_members }}</span>
+          </div>
+          <div class="metric-sub-item">
+            <span class="metric-sub-label">{{ t('Deze maand') }}</span>
+            <span class="metric-sub-value text-green-600">+{{ new_members_this_month }}</span>
+          </div>
+        </div>
+        <div class="metric-progress-bar">
+          <div class="metric-progress-fill bg-gradient-blue" style="width: {{ active_member_percentage }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Betalingen -->
+    <div class="dashboard-metric-card glow-purple">
+      <div class="metric-icon-circle bg-gradient-purple">
+        <span class="text-3xl">💳</span>
+      </div>
+      <div class="metric-content">
+        <div class="metric-main-value">€{{ "%.0f"|format(payments_this_month) }}</div>
+        <div class="metric-main-label">{{ t('Ontvangen deze maand') }}</div>
+        <div class="metric-sub-stats">
+          <div class="metric-sub-item">
+            <span class="metric-sub-label">{{ t('Openstaand') }}</span>
+            <span class="metric-sub-value text-orange-600">{{ overdue_members }}</span>
+          </div>
+        </div>
+        {% if overdue_members > 0 %}
+        <div class="metric-trend negative">
+          ⚠️ {{ overdue_members }} {{ t('achterstallige betalingen') }}
+        </div>
+        {% else %}
+        <div class="metric-trend positive">
+          ✓ {{ t('Alle betalingen up-to-date') }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- === QUICK ACTIONS BAR === -->
+  <div class="quick-actions-bar mb-8">
+    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <span>⚡</span> {{ t('Snelle acties') }}
+    </h2>
+    <div class="quick-actions-grid">
+      <a href="{{ url_for('main.bikes_new') }}" class="quick-action-btn bg-gradient-green">
+        <span class="text-2xl">🚲</span>
+        <span class="quick-action-label">{{ t('Nieuwe fiets') }}</span>
+      </a>
+      <a href="{{ url_for('main.members_new') }}" class="quick-action-btn bg-gradient-blue">
+        <span class="text-2xl">👤</span>
+        <span class="quick-action-label">{{ t('Nieuw lid') }}</span>
+      </a>
+      <a href="{{ url_for('main.members_list') }}" class="quick-action-btn bg-gradient-purple">
+        <span class="text-2xl">💳</span>
+        <span class="quick-action-label">{{ t('Betaling registreren') }}</span>
+      </a>
+      <a href="{{ url_for('main.inventory') }}" class="quick-action-btn bg-gradient-orange">
+        <span class="text-2xl">📦</span>
+        <span class="quick-action-label">{{ t('Inventaris') }}</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- === CHARTS SECTION === -->
+  <div class="dashboard-charts-grid mb-8">
+    <!-- Chart 1: Rental Activity -->
+    <div class="dashboard-chart-card">
+      <div class="chart-card-header">
+        <h3 class="chart-title">{{ t('Verhuuractiviteit (laatste 7 dagen)') }}</h3>
+      </div>
+      <div class="chart-container">
+        <canvas id="rentalActivityChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Chart 2: Member Activity Pie -->
+    <div class="dashboard-chart-card">
+      <div class="chart-card-header">
+        <h3 class="chart-title">{{ t('Ledenverdeling') }}</h3>
+      </div>
+      <div class="chart-container">
+        <canvas id="memberPieChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- === OBJECT CATEGORIES === -->
+  <div class="bike-categories-section mb-8">
+    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <span>🧩</span> {{ t('Objectvoorraad per categorie') }}
+    </h2>
+    
+    <!-- Fietsvoorraad subsection -->
+    <div class="mb-6">
+      <h3 class="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+        <span>🚲</span> {{ t('Fietsvoorraad') }}
+      </h3>
+      <div class="bike-categories-grid">
+        {% for category in bike_categories %}
+        <div class="category-card">
+          <div class="category-header">
+            <div class="category-name">{{ category.name }}</div>
+            <div class="category-total">{{ category.total }}</div>
+          </div>
+          <div class="category-breakdown">
+            <div class="category-stat">
+              <span class="category-stat-label">{{ t('Beschikbaar') }}</span>
+              <span class="category-stat-value text-green-600">{{ category.available }}</span>
+            </div>
+            <div class="category-stat">
+              <span class="category-stat-label">{{ t('Uitgeleend') }}</span>
+              <span class="category-stat-value text-blue-600">{{ category.rented }}</span>
+            </div>
+          </div>
+          <div class="category-progress">
+            <div class="category-progress-fill" style="width: {{ (category.available / category.total * 100) if category.total > 0 else 0 }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- === RECENT ACTIVITY === -->
+  <div class="recent-activity-section mb-8">
+    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <span>🗂</span> {{ t('Recente activiteit') }}
+    </h2>
+    <div class="activity-list">
+      {% for activity in recent_activity %}
+      <div class="activity-item">
+        <div class="activity-icon">{{ activity.icon }}</div>
+        <div class="activity-content">
+          <div class="activity-title">{{ activity.title }}</div>
+          <div class="activity-subtitle">{{ activity.subtitle }}</div>
+        </div>
+        <div class="activity-time">
+          {{ activity.time.strftime('%H:%M') if activity.time else '' }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js Configuration -->
+<script>
+// Rental Activity Chart
+const rentalCtx = document.getElementById('rentalActivityChart').getContext('2d');
+new Chart(rentalCtx, {
+  type: 'line',
+  data: {
+    labels: {{ rental_chart_labels|tojson }},
+    datasets: [
+      {
+        label: '{{ t("Verhuringen") }}',
+        data: {{ rental_chart_rentals|tojson }},
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        tension: 0.4,
+        fill: true,
+        borderWidth: 3
+      },
+      {
+        label: '{{ t("Terugbrengingen") }}',
+        data: {{ rental_chart_returns|tojson }},
+        borderColor: 'rgb(59, 130, 246)',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        fill: true,
+        borderWidth: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { font: { size: 13 } } }
+    },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Member Pie Chart
+const pieCtx = document.getElementById('memberPieChart').getContext('2d');
+new Chart(pieCtx, {
+  type: 'doughnut',
+  data: {
+    labels: {{ member_pie_labels|tojson }},
+    datasets: [{
+      data: {{ member_pie_values|tojson }},
+      backgroundColor: [
+        'rgb(34, 197, 94)',
+        'rgb(156, 163, 175)',
+        'rgb(251, 191, 36)',
+        'rgb(59, 130, 246)'
+      ],
+      borderWidth: 3,
+      borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 15 } }
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -44,6 +44,10 @@ class Member(db.Model):
     email = db.Column(db.String(120))
     phone = db.Column(db.String(30))
     address = db.Column(db.String(255))
+    street = db.Column(db.String(120))
+    house_number = db.Column(db.String(20))
+    postcode = db.Column(db.String(20))
+    city = db.Column(db.String(120))
     last_payment = db.Column(db.Date)
     status = db.Column(db.String(20), default='active')  # active | inactive | paused
 
@@ -77,6 +81,10 @@ class Rental(db.Model):
     start_date = db.Column(db.Date, default=date.today)
     end_date = db.Column(db.Date)
     status = db.Column(db.String(20), default='active')  # active | returned
+    # Relationships for convenient access in templates
+    bike = db.relationship('Bike', lazy='joined')
+    member = db.relationship('Member', lazy='joined')
+    child = db.relationship('Child', lazy='joined')
 
 
 class Payment(db.Model):
@@ -86,3 +94,12 @@ class Payment(db.Model):
     member_id = db.Column(db.String, db.ForeignKey('member.member_id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     paid_at = db.Column(db.Date, default=date.today)
+
+class Item(db.Model):
+    __tablename__ = 'item'
+    item_id = db.Column(db.String, primary_key=True, default=gen_uuid)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    name = db.Column(db.String(120), nullable=False)
+    type = db.Column(db.String(80))
+    status = db.Column(db.String(20), default='available')  # available | rented | repair | unavailable
+    archived = db.Column(db.Boolean, default=False)

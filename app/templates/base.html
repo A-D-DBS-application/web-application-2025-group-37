@@ -14,7 +14,7 @@
   <div class="flex min-h-screen">
     {% if session.get('user_id') %}
     <!-- Sidebar -->
-    <aside id="app-sidebar" class="sidebar w-64 bg-sky-600 text-white flex-shrink-0 hidden md:flex flex-col">
+    <aside id="app-sidebar" class="sidebar w-64 text-white flex-shrink-0 hidden md:flex flex-col" style="background: linear-gradient(180deg, #d97706 0%, #b45309 100%);">
       <div class="h-16 flex items-center gap-3 px-5 border-b border-white/10">
         <a href="{{ url_for('main.home') }}" class="flex items-center gap-3">
           <img class="h-10 w-auto" src="{{ static_first(['img/home/logo-' ~ current_lang ~ '.svg','img/logo-' ~ current_lang ~ '.svg'], url_for('static', filename='img/logo-' ~ current_lang ~ '.svg')) }}" alt="Logo" />
@@ -22,15 +22,15 @@
         </a>
       </div>
       <nav class="py-4 flex-1 space-y-1">
-        <a href="{{ url_for('main.dashboard') }}" class="flex items-center gap-3 px-5 py-2 rounded hover:bg-sky-500 {{ request.endpoint=='main.dashboard' and 'bg-sky-500' or '' }}">
+        <a href="{{ url_for('main.dashboard') }}" class="flex items-center gap-3 px-5 py-2 rounded hover:bg-white/10 {{ request.endpoint=='main.dashboard' and 'bg-white/20' or '' }}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zM3 9h2V7H3v2zm4 4h2v-2H7v2zm0 4h2v-2H7v2zM7 9h2V7H7v2zm4 4h2v-2h-2v2zm0 4h2v-2h-2v2zM11 9h2V7h-2v2zm4 8h6V5a2 2 0 0 0-2-2H9v18h6v-4z"/></svg>
           <span>{{ t('Dashboard') }}</span>
         </a>
-        <a href="{{ url_for('main.bike_list') }}" class="flex items-center gap-3 px-5 py-2 rounded hover:bg-sky-500 {{ request.endpoint=='main.bike_list' and 'bg-sky-500' or '' }}">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M5.5 15V7h5l2 4h5"/></svg>
-          <span>{{ t('Fietsen') }}</span>
+        <a href="{{ url_for('main.inventory') }}" class="flex items-center gap-3 px-5 py-2 rounded hover:bg-white/10 {{ request.endpoint=='main.inventory' and 'bg-white/20' or '' }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 14h2"/><path d="M11 14h2"/><path d="M15 14h2"/></svg>
+          <span>{{ t('Inventaris') }}</span>
         </a>
-        <a href="{{ url_for('main.members_list') }}" class="flex items-center gap-3 px-5 py-2 rounded hover:bg-sky-500 {{ request.endpoint=='main.members_list' and 'bg-sky-500' or '' }}">
+        <a href="{{ url_for('main.members_list') }}" class="flex items-center gap-3 px-5 py-2 rounded hover:bg-white/10 {{ request.endpoint=='main.members_list' and 'bg-white/20' or '' }}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.85"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span>{{ t('Leden') }}</span>
         </a>
@@ -46,20 +46,20 @@
 
     <!-- Main column -->
     <div class="flex-1 flex flex-col">
-      <header class="h-16 bg-sky-100 border-b border-sky-200 flex items-center">
+      <header class="h-16 border-b flex items-center" style="background: linear-gradient(90deg, #f9fafb 0%, #ffffff 100%); border-color: #e5e7eb;">
         <div class="w-full px-4 md:px-6 flex items-center justify-between">
           <div class="flex items-center gap-3">
             {% if session.get('user_id') %}
-            <button class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded hover:bg-sky-200" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" aria-label="Menu">
+            <button class="md:hidden inline-flex items-center justify-center h-10 w-10 rounded" style="color: #d97706;" onmouseover="this.style.background='rgba(217,119,6,0.1)'" onmouseout="this.style.background='transparent'" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" aria-label="Menu">
               <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="19" y2="6"/><line x1="3" y1="12" x2="19" y2="12"/><line x1="3" y1="18" x2="19" y2="18"/></svg>
             </button>
             {% endif %}
-            <span class="text-lg font-semibold">{% if request.endpoint=='main.dashboard' %}{{ t('Dashboard') }}{% endif %}</span>
+            <span class="text-lg font-semibold">{% if request.endpoint=='main.dashboard' %}{{ t('Dashboard') }}{% elif request.endpoint=='main.inventory' %}{{ t('Inventaris') }}{% endif %}</span>
           </div>
           <div class="flex items-center gap-2">
             <div class="inline-flex items-center gap-2 text-sm">
-              <a class="px-3 py-1 rounded border border-sky-300 bg-white/80 hover:bg-white text-sky-900" href="{{ url_for('main.set_language', lang_code='nl', next=request.full_path) }}">NL</a>
-              <a class="px-3 py-1 rounded border border-sky-300 bg-white/80 hover:bg-white text-sky-900" href="{{ url_for('main.set_language', lang_code='fr', next=request.full_path) }}">FR</a>
+              <a class="px-3 py-1 rounded border hover:bg-gray-50 transition-colors" style="border-color: #d97706; color: #b45309; background: white;" href="{{ url_for('main.set_language', lang_code='nl', next=request.full_path) }}">NL</a>
+              <a class="px-3 py-1 rounded border hover:bg-gray-50 transition-colors" style="border-color: #d97706; color: #b45309; background: white;" href="{{ url_for('main.set_language', lang_code='fr', next=request.full_path) }}">FR</a>
             </div>
           </div>
         </div>
@@ -67,11 +67,11 @@
 
       <!-- Mobile slide-out menu (only when logged in) -->
       {% if session.get('user_id') %}
-      <div id="mobile-menu" class="md:hidden hidden bg-sky-600 text-white px-4 py-4 space-y-2">
-        <a href="{{ url_for('main.dashboard') }}" class="block px-3 py-2 rounded hover:bg-sky-500">{{ t('Dashboard') }}</a>
-        <a href="{{ url_for('main.bike_list') }}" class="block px-3 py-2 rounded hover:bg-sky-500">{{ t('Fietsen') }}</a>
-        <a href="{{ url_for('main.members_list') }}" class="block px-3 py-2 rounded hover:bg-sky-500">{{ t('Leden') }}</a>
-        <a href="{{ url_for('main.logout') }}" class="block px-3 py-2 rounded hover:bg-sky-500">{{ t('Logout') }}</a>
+      <div id="mobile-menu" class="md:hidden hidden text-white px-4 py-4 space-y-2" style="background: linear-gradient(180deg, #d97706 0%, #b45309 100%);">
+        <a href="{{ url_for('main.dashboard') }}" class="block px-3 py-2 rounded hover:bg-white/10">{{ t('Dashboard') }}</a>
+        <a href="{{ url_for('main.inventory') }}" class="block px-3 py-2 rounded hover:bg-white/10">{{ t('Inventaris') }}</a>
+        <a href="{{ url_for('main.members_list') }}" class="block px-3 py-2 rounded hover:bg-white/10">{{ t('Leden') }}</a>
+        <a href="{{ url_for('main.logout') }}" class="block px-3 py-2 rounded hover:bg-white/10">{{ t('Logout') }}</a>
       </div>
       {% endif %}
 

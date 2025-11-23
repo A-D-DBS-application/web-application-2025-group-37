@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from datetime import datetime, date
 from app.extensions import db
-from app.models import Member, Child, User, Bike, Rental, Payment
+from app.models import Member, Child, User, Bike, Rental, Payment, Item
 from sqlalchemy import text
 
 main = Blueprint('main', __name__)
@@ -20,13 +20,21 @@ def home():
         return redirect(url_for('main.dashboard'))
     return render_template('login.html')
 
+@main.route('/inventory')
+def inventory():
+    bike_base = Bike.query.filter_by(archived=False)
+    available_bikes = bike_base.filter_by(status='available').order_by(Bike.created_at.desc()).all()
+    rented_bikes = bike_base.filter_by(status='rented').order_by(Bike.created_at.desc()).all()
+    repair_bikes = bike_base.filter_by(status='repair').order_by(Bike.created_at.desc()).all()
+    # Active rentals map for rented bikes (status 'active')
+    rentals = Rental.query.filter_by(status='active').all()
+    rental_map = {r.bike_id: r for r in rentals}
+    items = Item.query.filter_by(archived=False).order_by(Item.created_at.desc()).all()
+    return render_template('inventory.html', available_bikes=available_bikes, rented_bikes=rented_bikes, repair_bikes=repair_bikes, items=items, rental_map=rental_map)
+
 @main.route('/bikes')
 def bike_list():
-    base = Bike.query.filter_by(archived=False)
-    available_bikes = base.filter_by(status='available').order_by(Bike.created_at.desc()).all()
-    rented_bikes = base.filter_by(status='rented').order_by(Bike.created_at.desc()).all()
-    repair_bikes = base.filter_by(status='repair').order_by(Bike.created_at.desc()).all()
-    return render_template('bikes.html', available_bikes=available_bikes, rented_bikes=rented_bikes, repair_bikes=repair_bikes)
+    return redirect(url_for('main.inventory'))
 
 # -----------------------
 # Password reset (simplified placeholder)
@@ -96,17 +104,35 @@ def logout():
 @main.route('/members')
 @login_required
 def members_list():
-    active_members = (
-        Member.query.filter_by(status='active')
-        .order_by(Member.last_name.asc(), Member.first_name.asc())
-        .all()
-    )
-    inactive_members = (
-        Member.query.filter(Member.status != 'active')
-        .order_by(Member.last_name.asc(), Member.first_name.asc())
-        .all()
-    )
-    return render_template('members.html', active_members=active_members, inactive_members=inactive_members)
+    all_members = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
+    # Duplicate detection (email / phone)
+    email_counts = {}
+    phone_counts = {}
+    for m in all_members:
+        if m.email:
+            email_counts[m.email.lower()] = email_counts.get(m.email.lower(), 0) + 1
+        if m.phone:
+            phone_counts[m.phone] = phone_counts.get(m.phone, 0) + 1
+    duplicate_emails = {e for e, c in email_counts.items() if c > 1}
+    duplicate_phones = {p for p, c in phone_counts.items() if c > 1}
+
+    # Build lightweight view model list
+    today = date.today()
+    members_vm = []
+    for m in all_members:
+        last_payment = m.last_payment
+        if not last_payment:
+            payment_status = 'none'
+        else:
+            days = (today - last_payment).days
+            payment_status = 'overdue' if days > 365 else 'ok'
+        members_vm.append({
+            'member': m,
+            'children_count': len(m.children),
+            'duplicate': (m.email and m.email.lower() in duplicate_emails) or (m.phone and m.phone in duplicate_phones),
+            'payment_status': payment_status,
+        })
+    return render_template('members.html', members=members_vm)
 
 
 @main.route('/members/<member_id>/children', methods=['GET'])
@@ -154,11 +180,436 @@ def members_children_assign(member_id, child_id):
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    # Overzicht: alleen actieve leden en beschikbare fietsen (geen verhuur secties)
-    # Alfabetisch op achternaam, daarna voornaam
-    active_members = Member.query.filter_by(status='active').order_by(Member.last_name.asc(), Member.first_name.asc()).all()
-    available_bikes = Bike.query.filter_by(status='available', archived=False).order_by(Bike.created_at.desc()).all()
-    return render_template('dashboard.html', active_members=active_members, available_bikes=available_bikes)
+    from datetime import timedelta
+    from sqlalchemy import func, and_, case, desc
+    
+    today = date.today()
+    month_start = today.replace(day=1)
+    thirty_days_ago = today - timedelta(days=30)
+    seven_days_ago = today - timedelta(days=7)
+    tomorrow = today + timedelta(days=1)
+    
+    # === CARD 1: Totale fietsen (uitgebreid) ===
+    total_bikes = Bike.query.filter_by(archived=False).count()
+    available_bikes_count = Bike.query.filter_by(status='available', archived=False).count()
+    rented_bikes_count = Bike.query.filter_by(status='rented', archived=False).count()
+    repair_bikes_count = Bike.query.filter_by(status='repair', archived=False).count()
+    # Missing/lost bikes placeholder (would need a new status field)
+    missing_bikes_count = 0
+    new_bikes_today = Bike.query.filter(
+        Bike.archived == False,
+        func.date(Bike.created_at) == today
+    ).count()
+    
+    # === CARD 2: Actieve leden (uitgebreid) ===
+    total_members = Member.query.count()
+    active_members_count = Member.query.filter_by(status='active').count()
+    new_members_this_month = Member.query.filter(
+        func.date(Member.created_at) >= month_start
+    ).count()
+    
+    # Members with overdue payments
+    one_year_ago = today - timedelta(days=365)
+    overdue_members_count = Member.query.filter(
+        Member.status == 'active',
+        db.or_(
+            Member.last_payment == None,
+            Member.last_payment < one_year_ago
+        )
+    ).count()
+    
+    # === CARD 3: Kinderen ===
+    total_children = Child.query.count()
+    new_children_this_month = Child.query.join(Member).filter(
+        func.date(Child.created_at) >= month_start if hasattr(Child, 'created_at') else True
+    ).count() if hasattr(Child, 'created_at') else 0
+    
+    # Children without assigned bike (no active rental)
+    children_with_rental = db.session.query(Rental.child_id).filter(
+        Rental.status == 'active',
+        Rental.child_id != None
+    ).distinct().subquery()
+    children_without_bike = Child.query.filter(
+        ~Child.child_id.in_(db.session.query(children_with_rental))
+    ).count()
+    
+    # === CARD 4: Betalingen (uitgebreid) ===
+    payments_this_month = db.session.query(func.sum(Payment.amount)).filter(
+        func.date(Payment.paid_at) >= month_start
+    ).scalar() or 0
+    
+    # Outstanding amount (mock - would need better tracking)
+    overdue_amount = overdue_members_count * 10  # placeholder €10 per member
+    
+    # Last payment
+    last_payment = Payment.query.order_by(Payment.paid_at.desc()).first()
+    
+    # === CARD 5: Verhuringen (uitgebreid) ===
+    active_rentals_count = Rental.query.filter_by(status='active').count()
+    
+    # Rentals started today
+    rentals_today = Rental.query.filter(
+        func.date(Rental.start_date) == today
+    ).count()
+    
+    # Rentals ended today
+    returns_today = Rental.query.filter(
+        func.date(Rental.end_date) == today,
+        Rental.status == 'returned'
+    ).count()
+    
+    # Rentals due tomorrow (if we tracked due dates - placeholder)
+    rentals_due_tomorrow = 0
+    
+    # === CARD 4: Reparaties ===
+    bikes_in_repair = repair_bikes_count
+    # Average repair time (mock for now - would need repair history)
+    avg_repair_days = 7  # placeholder
+    
+    # === CHART DATA: Rental activity (last 7 days) ===
+    rental_chart_labels = []
+    rental_chart_rentals = []
+    rental_chart_returns = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        rental_chart_labels.append(day.strftime('%d/%m'))
+        
+        # Rentals started on this day
+        rentals_count = Rental.query.filter(func.date(Rental.created_at) == day).count()
+        rental_chart_rentals.append(rentals_count)
+        
+        # Returns on this day (rentals with end_date = day and status returned)
+        returns_count = Rental.query.filter(
+            func.date(Rental.end_date) == day,
+            Rental.status == 'returned'
+        ).count()
+        rental_chart_returns.append(returns_count)
+    
+    # === CHART DATA: Member activity (pie chart) ===
+    inactive_members = Member.query.filter_by(status='inactive').count()
+    paused_members = Member.query.filter_by(status='paused').count()
+    new_members_last_30 = Member.query.filter(
+        func.date(Member.created_at) >= thirty_days_ago
+    ).count()
+    
+    member_pie_labels = ['Actief', 'Inactief', 'Gepauzeerd', 'Nieuw (30d)']
+    member_pie_values = [active_members_count, inactive_members, paused_members, new_members_last_30]
+    
+    # === BIKE CATEGORIES ===
+    # Group by type
+    bike_categories_raw = db.session.query(
+        Bike.type,
+        func.count(Bike.bike_id).label('total'),
+        func.sum(case((Bike.status == 'available', 1), else_=0)).label('available'),
+        func.sum(case((Bike.status == 'rented', 1), else_=0)).label('rented')
+    ).filter(Bike.archived == False).group_by(Bike.type).all()
+    
+    bike_categories = []
+    for cat in bike_categories_raw:
+        bike_categories.append({
+            'name': cat.type or 'Onbekend',
+            'total': cat.total,
+            'available': cat.available or 0,
+            'rented': cat.rented or 0
+        })
+    
+    # === ALERTS / TO-DO ===
+    alerts = []
+    
+    # Overdue payments
+    if overdue_members_count > 0:
+        alerts.append({
+            'type': 'warning',
+            'icon': '💳',
+            'message': f'{overdue_members_count} lid(en) met achterstallige betaling'
+        })
+    
+    # Long-term rentals (> 90 days)
+    ninety_days_ago = today - timedelta(days=90)
+    long_rentals = Rental.query.filter(
+        Rental.status == 'active',
+        Rental.start_date < ninety_days_ago
+    ).count()
+    if long_rentals > 0:
+        alerts.append({
+            'type': 'info',
+            'icon': '⏰',
+            'message': f'{long_rentals} fiets(en) langer dan 90 dagen uitgeleend'
+        })
+    
+    # Bikes in repair
+    if bikes_in_repair > 0:
+        alerts.append({
+            'type': 'danger',
+            'icon': '🔧',
+            'message': f'{bikes_in_repair} fiets(en) in onderhoud'
+        })
+    
+    # === RECENT ACTIVITY ===
+    recent_activity = []
+    
+    # Recent rentals
+    recent_rentals_raw = Rental.query.order_by(Rental.created_at.desc()).limit(3).all()
+    for r in recent_rentals_raw:
+        renter_name = ''
+        if r.member:
+            renter_name = f'{r.member.first_name} {r.member.last_name}'
+        elif r.child:
+            renter_name = f'{r.child.first_name} {r.child.last_name}'
+        
+        recent_activity.append({
+            'type': 'rental',
+            'icon': '🚲',
+            'title': f'Verhuur: {r.bike.name if r.bike else "Onbekend"}',
+            'subtitle': f'Aan {renter_name}',
+            'time': r.created_at
+        })
+    
+    # Recent members
+    recent_members_raw = Member.query.order_by(Member.created_at.desc()).limit(2).all()
+    for m in recent_members_raw:
+        recent_activity.append({
+            'type': 'member',
+            'icon': '👤',
+            'title': f'Nieuw lid: {m.first_name} {m.last_name}',
+            'subtitle': m.email or m.phone or '',
+            'time': m.created_at
+        })
+    
+    # Recent payments
+    recent_payments = Payment.query.order_by(Payment.created_at.desc()).limit(2).all()
+    for p in recent_payments:
+        member = Member.query.get(p.member_id)
+        recent_activity.append({
+            'type': 'payment',
+            'icon': '💳',
+            'title': f'Betaling ontvangen: €{p.amount:.2f}',
+            'subtitle': f'{member.first_name} {member.last_name}' if member else '',
+            'time': p.created_at
+        })
+    
+    # Sort all activity by time
+    recent_activity.sort(key=lambda x: x['time'], reverse=True)
+    recent_activity = recent_activity[:8]  # Top 8
+    
+    # === INVENTORY BAR CHART DATA ===
+    inventory_chart_labels = [cat['name'] for cat in bike_categories]
+    inventory_chart_available = [cat['available'] for cat in bike_categories]
+    inventory_chart_rented = [cat['rented'] for cat in bike_categories]
+    
+    # === TO-DO LIST ITEMS ===
+    todo_items = []
+    
+    # Overdue payments
+    if overdue_members_count > 0:
+        overdue_list = Member.query.filter(
+            Member.status == 'active',
+            db.or_(Member.last_payment == None, Member.last_payment < one_year_ago)
+        ).limit(5).all()
+        for m in overdue_list:
+            days_overdue = (today - m.last_payment).days if m.last_payment else 365
+            todo_items.append({
+                'type': 'payment',
+                'priority': 'high',
+                'title': f'{m.first_name} {m.last_name}',
+                'message': f'Betaling {days_overdue} dagen achterstallig'
+            })
+    
+    # Long rentals (> 7 days)
+    long_rentals_list = Rental.query.filter(
+        Rental.status == 'active',
+        Rental.start_date < seven_days_ago
+    ).limit(5).all()
+    for r in long_rentals_list:
+        days = (today - r.start_date).days
+        renter = r.member.first_name if r.member else r.child.first_name if r.child else 'Onbekend'
+        todo_items.append({
+            'type': 'rental',
+            'priority': 'medium',
+            'title': f'{r.bike.name if r.bike else "Fiets"}',
+            'message': f'{days} dagen uit bij {renter}'
+        })
+    
+    # Bikes in repair
+    repair_list = Bike.query.filter_by(status='repair', archived=False).limit(3).all()
+    for bike in repair_list:
+        todo_items.append({
+            'type': 'repair',
+            'priority': 'medium',
+            'title': bike.name,
+            'message': 'In reparatie'
+        })
+    
+    # Children without bike
+    if children_without_bike > 0:
+        children_list = Child.query.filter(
+            ~Child.child_id.in_(db.session.query(children_with_rental))
+        ).limit(3).all()
+        for child in children_list:
+            todo_items.append({
+                'type': 'child',
+                'priority': 'low',
+                'title': f'{child.first_name} {child.last_name}',
+                'message': 'Geen actieve fiets'
+            })
+    
+    # === POPULAR MODELS (Most rented) ===
+    popular_models = db.session.query(
+        Bike.type,
+        func.count(Rental.rental_id).label('rental_count')
+    ).join(Rental, Bike.bike_id == Rental.bike_id)\
+     .group_by(Bike.type)\
+     .order_by(desc('rental_count'))\
+     .limit(5).all()
+    
+    popular_models_list = [{'name': m.type or 'Onbekend', 'count': m.rental_count} for m in popular_models]
+    
+    # === REPAIR INSIGHTS ===
+    repair_stats = {
+        'total_in_repair': repair_bikes_count,
+        'avg_repair_time': 7,  # placeholder
+        'bikes': Bike.query.filter_by(status='repair', archived=False).limit(5).all()
+    }
+    
+    # === BIKES WITHOUT RENTAL IN 30+ DAYS ===
+    thirty_days_rentals = db.session.query(Rental.bike_id).filter(
+        Rental.created_at >= thirty_days_ago
+    ).distinct().subquery()
+    
+    unused_bikes = Bike.query.filter(
+        Bike.archived == False,
+        ~Bike.bike_id.in_(db.session.query(thirty_days_rentals))
+    ).limit(10).all()
+    
+    # === PAYMENT INSIGHTS ===
+    # Monthly payments for chart (last 6 months)
+    payment_months = []
+    payment_amounts = []
+    for i in range(5, -1, -1):
+        month_date = today.replace(day=1) - timedelta(days=30*i)
+        next_month = (month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+        amount = db.session.query(func.sum(Payment.amount)).filter(
+            Payment.paid_at >= month_date,
+            Payment.paid_at < next_month
+        ).scalar() or 0
+        payment_months.append(month_date.strftime('%b'))
+        payment_amounts.append(float(amount))
+    
+    # Biggest debtors
+    top_debtors = Member.query.filter(
+        Member.status == 'active',
+        db.or_(Member.last_payment == None, Member.last_payment < one_year_ago)
+    ).order_by(Member.last_payment.asc().nullsfirst()).limit(5).all()
+    
+    # === RENTAL HEATMAP DATA (by hour - mock) ===
+    rental_hours = [0] * 24
+    hourly_rentals = db.session.query(
+        func.extract('hour', Rental.created_at).label('hour'),
+        func.count(Rental.rental_id).label('count')
+    ).group_by('hour').all()
+    for hr in hourly_rentals:
+        if hr.hour is not None:
+            rental_hours[int(hr.hour)] = hr.count
+    
+    # === RENTAL DURATION STATS ===
+    completed_rentals = Rental.query.filter(
+        Rental.status == 'returned',
+        Rental.end_date != None
+    ).all()
+    
+    if completed_rentals:
+        durations = [(r.end_date - r.start_date).days for r in completed_rentals if r.start_date and r.end_date]
+        avg_rental_duration = sum(durations) / len(durations) if durations else 0
+    else:
+        avg_rental_duration = 0
+    
+    # === ACHIEVEMENTS ===
+    achievements = []
+    
+    # Rentals this month
+    rentals_this_month = Rental.query.filter(
+        func.date(Rental.created_at) >= month_start
+    ).count()
+    if rentals_this_month >= 50:
+        achievements.append({'icon': '🏆', 'text': f'{rentals_this_month} verhuringen deze maand'})
+    
+    # All payments up to date
+    if overdue_members_count == 0:
+        achievements.append({'icon': '💯', 'text': '100% betalingen up-to-date'})
+    
+    # No bikes in repair
+    if repair_bikes_count == 0:
+        achievements.append({'icon': '✅', 'text': 'Alle fietsen operationeel'})
+    
+    # Calculate percentages
+    active_member_percentage = round((active_members_count / total_members * 100) if total_members > 0 else 0, 1)
+    bike_availability_percentage = round((available_bikes_count / total_bikes * 100) if total_bikes > 0 else 0, 1)
+    children_with_bike_percentage = round(((total_children - children_without_bike) / total_children * 100) if total_children > 0 else 0, 1)
+    
+    return render_template('dashboard.html',
+        # Card 1: Bikes (extended)
+        total_bikes=total_bikes,
+        available_bikes_count=available_bikes_count,
+        rented_bikes_count=rented_bikes_count,
+        repair_bikes_count=repair_bikes_count,
+        missing_bikes_count=missing_bikes_count,
+        new_bikes_today=new_bikes_today,
+        bike_availability_percentage=bike_availability_percentage,
+        # Card 2: Members (extended)
+        active_members_count=active_members_count,
+        total_members=total_members,
+        new_members_this_month=new_members_this_month,
+        overdue_members_count=overdue_members_count,
+        active_member_percentage=active_member_percentage,
+        # Card 3: Children (NEW)
+        total_children=total_children,
+        new_children_this_month=new_children_this_month,
+        children_without_bike=children_without_bike,
+        children_with_bike_percentage=children_with_bike_percentage,
+        # Card 4: Payments (extended)
+        payments_this_month=payments_this_month,
+        overdue_members=overdue_members_count,
+        overdue_amount=overdue_amount,
+        last_payment=last_payment,
+        # Card 5: Rentals (NEW)
+        active_rentals_count=active_rentals_count,
+        rentals_today=rentals_today,
+        returns_today=returns_today,
+        rentals_due_tomorrow=rentals_due_tomorrow,
+        # Charts
+        rental_chart_labels=rental_chart_labels,
+        rental_chart_rentals=rental_chart_rentals,
+        rental_chart_returns=rental_chart_returns,
+        member_pie_labels=member_pie_labels,
+        member_pie_values=member_pie_values,
+        inventory_chart_labels=inventory_chart_labels,
+        inventory_chart_available=inventory_chart_available,
+        inventory_chart_rented=inventory_chart_rented,
+        payment_months=payment_months,
+        payment_amounts=payment_amounts,
+        # Categories
+        bike_categories=bike_categories,
+        # To-do list
+        todo_items=todo_items,
+        # Popular models
+        popular_models=popular_models_list,
+        # Repair insights
+        repair_stats=repair_stats,
+        # Unused bikes
+        unused_bikes=unused_bikes,
+        # Top debtors
+        top_debtors=top_debtors,
+        # Rental heatmap
+        rental_hours=rental_hours,
+        # Rental duration
+        avg_rental_duration=avg_rental_duration,
+        # Achievements
+        achievements=achievements,
+        # Recent activity
+        recent_activity=recent_activity,
+        # Current datetime for debtors calculation
+        now=today
+    )
 
 
 @main.route('/members/new', methods=['GET', 'POST'])
@@ -169,7 +620,15 @@ def members_new():
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
         phone = request.form.get('phone', '').strip()
-        address = request.form.get('address', '').strip()
+        street = request.form.get('street','').strip()
+        house_number = request.form.get('house_number','').strip()
+        postcode = request.form.get('postcode','').strip()
+        city = request.form.get('city','').strip()
+        address = ''
+        if street or house_number or postcode or city:
+            left = ' '.join([street, house_number]).strip()
+            right = ' '.join([postcode, city]).strip()
+            address = ', '.join([p for p in [left, right] if p])
         last_payment_raw = request.form.get('last_payment')
         status = request.form.get('status', 'active')
 
@@ -186,6 +645,10 @@ def members_new():
             email=email,
             phone=phone,
             address=address,
+            street=street or None,
+            house_number=house_number or None,
+            postcode=postcode or None,
+            city=city or None,
             last_payment=last_payment,
             status=status,
         )
@@ -238,7 +701,21 @@ def members_edit(member_id):
         member.last_name = request.form.get('last_name', '').strip()
         member.email = request.form.get('email', '').strip()
         member.phone = request.form.get('phone', '').strip()
-        member.address = request.form.get('address', '').strip()
+        street = request.form.get('street','').strip()
+        house_number = request.form.get('house_number','').strip()
+        postcode = request.form.get('postcode','').strip()
+        city = request.form.get('city','').strip()
+        # Persist fields
+        member.street = street or None
+        member.house_number = house_number or None
+        member.postcode = postcode or None
+        member.city = city or None
+        if street or house_number or postcode or city:
+            left = ' '.join([street, house_number]).strip()
+            right = ' '.join([postcode, city]).strip()
+            member.address = ', '.join([p for p in [left, right] if p])
+        else:
+            member.address = ''
         last_payment_raw = request.form.get('last_payment')
         status = request.form.get('status', 'active')
 
@@ -293,7 +770,7 @@ def bikes_new():
         bike = Bike(name=name or 'Fiets', type=btype, status=status)
         db.session.add(bike)
         db.session.commit()
-        return redirect(url_for('main.bike_list'))
+        return redirect(url_for('main.inventory'))
     return render_template('bike_form.html', mode='new', bike=None)
 
 
@@ -308,7 +785,7 @@ def bikes_edit(bike_id):
             bike.type = _t
         bike.status = request.form.get('status','available')
         db.session.commit()
-        return redirect(url_for('main.bike_list'))
+        return redirect(url_for('main.inventory'))
     return render_template('bike_form.html', mode='edit', bike=bike)
 
 
@@ -319,7 +796,7 @@ def bikes_status(bike_id):
     new_status = request.form.get('status','available')
     bike.status = new_status
     db.session.commit()
-    return redirect(url_for('main.bike_list'))
+    return redirect(url_for('main.inventory'))
 
 
 @main.route('/bikes/<bike_id>/archive', methods=['POST'])
@@ -328,7 +805,7 @@ def bikes_archive(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     bike.archived = True
     db.session.commit()
-    return redirect(url_for('main.bike_list'))
+    return redirect(url_for('main.inventory'))
 
 @main.route('/bikes/<bike_id>/delete', methods=['POST'])
 @login_required
@@ -339,7 +816,7 @@ def bikes_delete(bike_id):
     db.session.delete(bike)
     db.session.commit()
     flash('Fiets verwijderd', 'info')
-    return redirect(url_for('main.bike_list'))
+    return redirect(url_for('main.inventory'))
 
 
 # -----------------------
@@ -359,9 +836,65 @@ def rent_bike_action(bike_id):
         db.session.add(rental)
         bike.status = 'rented'
         db.session.commit()
-        return redirect(url_for('main.bike_list'))
+        return redirect(url_for('main.inventory'))
     members = Member.query.order_by(Member.last_name).all()
     return render_template('rent.html', bike=bike, members=members)
+
+# -----------------------
+# Items (generic inventory objects)
+# -----------------------
+
+@main.route('/items/new', methods=['GET','POST'])
+@login_required
+def items_new():
+    if request.method == 'POST':
+        name = request.form.get('name','').strip() or 'Object'
+        itype = request.form.get('type','').strip().lower() or 'algemeen'
+        status = request.form.get('status','available')
+        item = Item(name=name, type=itype, status=status)
+        db.session.add(item)
+        db.session.commit()
+        return redirect(url_for('main.inventory'))
+    return render_template('item_form.html', mode='new', item=None)
+
+# Unified object creation (Bike or generic Item)
+@main.route('/objects/new', methods=['GET','POST'])
+@login_required
+def objects_new():
+    if request.method == 'POST':
+        kind = (request.form.get('object_kind') or '').strip().lower()
+        name = (request.form.get('name') or '').strip() or 'Object'
+        obj_type = (request.form.get('type') or '').strip().lower() or None
+        status = request.form.get('status','available')
+        if kind == 'fiets':
+            # Create Bike
+            btype = obj_type in {'elektrisch','gewoon'} and obj_type or 'gewoon'
+            bike = Bike(name=name, type=btype, status=status)
+            db.session.add(bike)
+        else:
+            item = Item(name=name, type=obj_type, status=status)
+            db.session.add(item)
+        db.session.commit()
+        return redirect(url_for('main.inventory'))
+    return render_template('object_form.html')
+
+@main.route('/items/<item_id>/status', methods=['POST'])
+@login_required
+def items_status(item_id):
+    item = Item.query.get_or_404(item_id)
+    new_status = request.form.get('status','available')
+    item.status = new_status
+    db.session.commit()
+    return redirect(url_for('main.inventory'))
+
+@main.route('/items/<item_id>/delete', methods=['POST'])
+@login_required
+def items_delete(item_id):
+    item = Item.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    flash('Object verwijderd', 'info')
+    return redirect(url_for('main.inventory'))
 
 
 # -----------------------
