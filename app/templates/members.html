@@ -1,237 +1,111 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="members-toolbar mb-4">
-  <h2 class="section-title text-xl md:text-2xl font-semibold flex items-center gap-2">{{ t('Leden') }}</h2>
-  <div class="grow flex gap-2 items-center">
-    <input id="member-search" type="text" placeholder="Zoek naam, e-mail, telefoon" class="border rounded px-3 py-2 w-full text-sm" />
-    <select id="filter-status" class="border rounded px-2 py-2 text-sm">
-      <option value="">Status</option>
-      <option value="active">{{ t('actief') }}</option>
-      <option value="inactive">{{ t('inactief') }}</option>
-    </select>
-  </div>
-  <div class="view-toggle flex gap-2">
-    <button id="btn-table" class="btn btn-neutral btn-sm" type="button">Tabel</button>
-    <button id="btn-cards" class="btn btn-neutral btn-sm" type="button">Kaarten</button>
-  </div>
-  <a href="{{ url_for('main.members_new') }}" class="btn btn-primary" style="position:relative;"><span>＋</span>{{ t('Nieuw lid') }}</a>
+{% set renting_members = renting_members or [] %}
+{% set active_members = active_members or [] %}
+{% set inactive_members = inactive_members or [] %}
+<div class="flex items-center justify-between mb-4">
+  <h2 class="text-2xl md:text-3xl font-semibold">{{ t('Leden') }}</h2>
+  <a href="{{ url_for('main.members_new') }}" class="btn btn-primary">{{ t('Nieuw lid') }}</a>
+  
 </div>
 
+<!-- Leden met actieve verhuring -->
+<!-- Verhuringen tabel verwijderd, focus op Actief/Inactief -->
+
+<!-- Actieve leden -->
 <div class="members-table-wrapper card table-card p-4 mb-6">
-  <table id="members-table" class="w-full text-left">
+  <h3 class="text-lg font-semibold mb-3">{{ t('Actieve leden') }} ({{ active_members|length }})</h3>
+  <table class="w-full text-left table-fixed">
     <thead class="bg-gray-50 text-sm">
       <tr>
-        <th class="py-2 px-3">{{ t('Naam') }}</th>
-        <th class="py-2 px-3">{{ t('E-mail') }}</th>
-        <th class="py-2 px-3">{{ t('Telefoon') }}</th>
-        <th class="py-2 px-3">{{ t('Adres') }}</th>
-        <th class="py-2 px-3">{{ t('Laatste betaling') }}</th>
-        <th class="py-2 px-3 sortable" data-sort="status">{{ t('Status') }}<span class="sort-indicator"></span></th>
-        <th class="py-2 px-3">{{ t('Kinderen') }}</th>
-        <th class="py-2 px-3 text-right">{{ t('Acties') }}</th>
+        <th class="py-2 px-3" style="width:22%">{{ t('Naam') }}</th>
+        <th class="py-2 px-3" style="width:22%">{{ t('E-mail') }}</th>
+        <th class="py-2 px-3" style="width:12%">{{ t('Telefoon') }}</th>
+        <th class="py-2 px-3" style="width:22%">{{ t('Adres') }}</th>
+        <th class="py-2 px-3" style="width:10%">{{ t('Laatste betaling') }}</th>
+        <th class="py-2 px-3" style="width:7%">{{ t('Kinderen') }}</th>
+        <th class="py-2 px-3 text-right" style="width:5%">{{ t('Acties') }}</th>
       </tr>
     </thead>
-    <tbody id="members-body" class="text-sm">
-      {% for vm in members %}
-      {% set m = vm.member %}
-      <tr class="border-t" data-name="{{ (m.first_name + ' ' + m.last_name)|lower }}" data-email="{{ (m.email or '')|lower }}" data-phone="{{ m.phone or '' }}" data-status="{{ m.status }}">
-        <td class="py-2 px-3 whitespace-nowrap font-medium">
-          {{ m.first_name }} {{ m.last_name }}
-          {% if vm.duplicate %}<span class="badge badge-duplicate ml-2" title="Deze gegevens bestaan al bij een ander lid.">Mogelijk duplicaat</span>{% endif %}
-        </td>
-        <td class="py-2 px-3 break-words">{{ m.email or '-' }}</td>
+    <tbody class="text-sm">
+      {% for m in active_members %}
+      <tr class="border-t">
+        <td class="py-2 px-3 whitespace-nowrap font-medium">{{ m.first_name }} {{ m.last_name }}</td>
+        <td class="py-2 px-3 truncate" title="{{ m.email or '-' }}">{{ m.email or '-' }}</td>
         <td class="py-2 px-3">{{ m.phone or '-' }}</td>
-        <td class="py-2 px-3">
-          {% if m.address %}
-            <span title="{{ m.address }}">{{ m.address }}</span>
-          {% else %}
-            <span class="badge badge-neutral" title="Geen adres ingevuld">Geen adres</span>
-          {% endif %}
-        </td>
-        <td class="py-2 px-3">
-          {% if vm.payment_status == 'none' %}
-            <span class="badge badge-warning">Geen betaling</span>
-          {% elif vm.payment_status == 'overdue' %}
-            <span class="badge badge-danger">Overdue</span>
-          {% else %}
-            <span class="badge badge-success">{{ m.last_payment.strftime('%Y-%m-%d') }}</span>
-          {% endif %}
-        </td>
-        <td class="py-2 px-3">
-          <span class="badge {% if m.status=='active' %}badge-success{% else %}badge-danger{% endif %}">{{ t(m.status=='active' and 'actief' or 'inactief') }}</span>
-        </td>
-        <td class="py-2 px-3 text-center">
-          {% if vm.children_count > 0 %}
-            <span class="badge badge-info">{{ vm.children_count }}</span>
-          {% else %}
-            <span class="badge badge-neutral">0</span>
-          {% endif %}
-        </td>
+        <td class="py-2 px-3 truncate" title="{{ m.address or '' }}">{% if m.address %}{{ m.address }}{% else %}<span class="text-gray-600">{{ t('Geen adres') }}</span>{% endif %}</td>
+        {% set payment_status = 'none' if not m.last_payment else ('overdue' if (today - m.last_payment).days > 365 else 'ok') %}
+        <td class="py-2 px-3">{% if payment_status == 'none' %}<span class="text-red-600">{{ t('Geen betaling') }}</span>{% elif payment_status == 'overdue' %}{{ t('Overdue') }}{% else %}{{ m.last_payment and m.last_payment.strftime('%Y-%m-%d') or '-' }}{% endif %}</td>
+        <td class="py-2 px-3 text-center"><a href="{{ url_for('main.members_children', member_id=m.member_id) }}" class="link">{{ t('Zie kinderen') }}</a></td>
         <td class="py-2 px-3 text-right">
-          <div class="dropdown inline-block">
-            <button type="button" class="icon-btn" aria-haspopup="true" aria-expanded="false">⋮</button>
-            <div class="dropdown-menu" role="menu">
-              <a href="{{ url_for('main.members_children', member_id=m.member_id) }}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.85"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Bekijk kinderen</a>
-              <a href="{{ url_for('main.members_payment', member_id=m.member_id) }}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="15" r="1"/></svg>
-                Betaling</a>
-              <a href="{{ url_for('main.members_edit', member_id=m.member_id) }}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
-                Lid bewerken</a>
-              <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" onsubmit="return confirmDeleteMember(event, '{{ m.first_name }} {{ m.last_name }}', {{ vm.children_count }});">
-                <button type="submit" class="text-red-600 hover:text-red-700 hover:bg-red-50">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
-                  {{ t('Verwijderen') }}</button>
-              </form>
-            </div>
-          </div>
+          <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" class="inline-block" onsubmit="return confirmDeleteMember(event, '{{ m.first_name }} {{ m.last_name }}', {{ m.children|length if m.children else 0 }});">
+            <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+            </button>
+          </form>
         </td>
       </tr>
       {% else %}
-      <tr><td class="py-6 px-4 text-gray-600" colspan="8">Geen leden.</td></tr>
+      <tr><td class="py-6 px-4 text-gray-600" colspan="7">{{ t('Geen leden in deze categorie.') }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-<!-- Card view container -->
-<div id="members-cards" class="members-cards mb-8">
-  {% for vm in members %}
-  {% set m = vm.member %}
-  <div class="member-card" data-name="{{ (m.first_name + ' ' + m.last_name)|lower }}" data-email="{{ (m.email or '')|lower }}" data-phone="{{ m.phone or '' }}" data-status="{{ m.status }}">
-    <h4>{{ m.first_name }} {{ m.last_name }}</h4>
-    <div class="badges">
-      {% if vm.duplicate %}<span class="badge badge-duplicate" title="Duplicaat">Duplicaat</span>{% endif %}
-      <span class="badge {% if m.status=='active' %}badge-success{% else %}badge-danger{% endif %}">{{ t(m.status=='active' and 'actief' or 'inactief') }}</span>
-      {% if vm.payment_status == 'none' %}
-        <span class="badge badge-warning">Geen betaling</span>
-      {% elif vm.payment_status == 'overdue' %}
-        <span class="badge badge-danger">Overdue</span>
-      {% else %}
-        <span class="badge badge-success">{{ m.last_payment.strftime('%Y-%m-%d') }}</span>
-      {% endif %}
-      <span class="badge {% if vm.children_count>0 %}badge-info{% else %}badge-neutral{% endif %}">{{ vm.children_count }}</span>
-    </div>
-    <div class="text-xs text-gray-600">{{ m.email or '—' }}</div>
-    <div class="text-xs text-gray-600">{{ m.phone or '—' }}</div>
-    <div class="text-xs text-gray-600">{% if m.address %}{{ m.address }}{% else %}<span class="badge badge-neutral">Geen adres</span>{% endif %}</div>
-    <div class="actions">
-      <div class="dropdown inline-block">
-        <button type="button" class="icon-btn" aria-haspopup="true" aria-expanded="false">⋮</button>
-        <div class="dropdown-menu" role="menu">
-          <a href="{{ url_for('main.members_children', member_id=m.member_id) }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.85"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Bekijk kinderen</a>
-          <a href="{{ url_for('main.members_payment', member_id=m.member_id) }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="15" r="1"/></svg>
-            Betaling</a>
-          <a href="{{ url_for('main.members_edit', member_id=m.member_id) }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5l4 4L7 21H3v-4L16.5 3.5z"/></svg>
-            Lid bewerken</a>
-          <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" onsubmit="return confirmDeleteMember(event, '{{ m.first_name }} {{ m.last_name }}', {{ vm.children_count }});">
-            <button type="submit" class="text-red-600 hover:text-red-700 hover:bg-red-50">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
-              {{ t('Verwijderen') }}</button>
+<!-- Inactieve leden -->
+<div class="members-table-wrapper card table-card p-4 mb-6">
+  <h3 class="text-lg font-semibold mb-3">{{ t('Inactieve leden') }} ({{ inactive_members|length }})</h3>
+  <table class="w-full text-left table-fixed">
+    <thead class="bg-gray-50 text-sm">
+      <tr>
+        <th class="py-2 px-3" style="width:22%">{{ t('Naam') }}</th>
+        <th class="py-2 px-3" style="width:22%">{{ t('E-mail') }}</th>
+        <th class="py-2 px-3" style="width:12%">{{ t('Telefoon') }}</th>
+        <th class="py-2 px-3" style="width:22%">{{ t('Adres') }}</th>
+        <th class="py-2 px-3" style="width:10%">{{ t('Laatste betaling') }}</th>
+        <th class="py-2 px-3" style="width:7%">{{ t('Kinderen') }}</th>
+        <th class="py-2 px-3 text-right" style="width:5%">{{ t('Acties') }}</th>
+      </tr>
+    </thead>
+    <tbody class="text-sm">
+      {% for m in inactive_members %}
+      <tr class="border-t">
+        <td class="py-2 px-3 whitespace-nowrap font-medium">{{ m.first_name }} {{ m.last_name }}</td>
+        <td class="py-2 px-3 truncate" title="{{ m.email or '-' }}">{{ m.email or '-' }}</td>
+        <td class="py-2 px-3">{{ m.phone or '-' }}</td>
+        <td class="py-2 px-3 truncate" title="{{ m.address or '' }}">{% if m.address %}{{ m.address }}{% else %}<span class="text-gray-600">{{ t('Geen adres') }}</span>{% endif %}</td>
+        {% set payment_status = 'none' if not m.last_payment else ('overdue' if (today - m.last_payment).days > 365 else 'ok') %}
+        <td class="py-2 px-3">{% if payment_status == 'none' %}<span class="text-red-600">{{ t('Geen betaling') }}</span>{% elif payment_status == 'overdue' %}{{ t('Overdue') }}{% else %}{{ m.last_payment and m.last_payment.strftime('%Y-%m-%d') or '-' }}{% endif %}</td>
+        <td class="py-2 px-3 text-center"><a href="{{ url_for('main.members_children', member_id=m.member_id) }}" class="link">{{ t('Zie kinderen') }}</a></td>
+        <td class="py-2 px-3 text-right">
+          <form method="POST" action="{{ url_for('main.members_delete', member_id=m.member_id) }}" class="inline-block" onsubmit="return confirmDeleteMember(event, '{{ m.first_name }} {{ m.last_name }}', {{ m.children|length if m.children else 0 }});">
+            <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+            </button>
           </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  {% endfor %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="py-6 px-4 text-gray-600" colspan="7">{{ t('Geen leden in deze categorie.') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <script>
-// Debounce helper
-function debounce(fn, ms){ let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), ms); }; }
-
-const searchInput = document.getElementById('member-search');
-const filterStatus = document.getElementById('filter-status');
-// Removed payment & children filters per request
-const tbody = document.getElementById('members-body');
-const cardsContainer = document.getElementById('members-cards');
-const tableWrapper = document.querySelector('.members-table-wrapper');
-const btnTable = document.getElementById('btn-table');
-const btnCards = document.getElementById('btn-cards');
-
-function applyFilters(){
-  const q = (searchInput.value || '').toLowerCase();
-  const st = filterStatus.value;
-  [...tbody.querySelectorAll('tr')].forEach(row => {
-    const name = row.dataset.name;
-    const email = row.dataset.email;
-    const phone = row.dataset.phone;
-    const status = row.dataset.status;
-    let ok = true;
-    if(q && !(name.includes(q) || email.includes(q) || phone.includes(q))) ok = false;
-    if(st && status !== st) ok = false;
-    row.style.display = ok? '' : 'none';
-  });
-  [...cardsContainer.querySelectorAll('.member-card')].forEach(card => {
-    const name = card.dataset.name;
-    const email = card.dataset.email;
-    const phone = card.dataset.phone;
-    const status = card.dataset.status;
-    let ok = true;
-    if(q && !(name.includes(q) || email.includes(q) || phone.includes(q))) ok = false;
-    if(st && status !== st) ok = false;
-    card.style.display = ok? '' : 'none';
-  });
-}
-const debouncedFilter = debounce(applyFilters,300);
-[searchInput, filterStatus].forEach(el=> el.addEventListener('input', debouncedFilter));
-[filterStatus].forEach(el=> el.addEventListener('change', applyFilters));
-
-// Sorting
-let sortState = { key:'status', dir:null }; // Only status sorting allowed
-function applyStatusSort(){
-  const rows = [...tbody.querySelectorAll('tr')];
-  if(!sortState.dir){ rows.forEach(r=>tbody.appendChild(r)); return; }
-  rows.sort((a,b)=>{
-    const va = a.dataset.status || '';
-    const vb = b.dataset.status || '';
-    return sortState.dir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-  });
-  rows.forEach(r=>tbody.appendChild(r));
-}
-const statusHeader = document.querySelector('#members-table thead .sortable');
-statusHeader.addEventListener('click',()=>{
-  if(sortState.dir===null) sortState.dir='asc';
-  else if(sortState.dir==='asc') sortState.dir='desc';
-  else sortState.dir=null;
-  statusHeader.querySelector('.sort-indicator').textContent = sortState.dir ? (sortState.dir==='asc'?'▲':'▼') : '';
-  applyStatusSort();
-});
-
-// Dropdowns
-document.addEventListener('click', e=>{
-  const btn = e.target.closest('.dropdown > button');
-  if(btn){ const menu = btn.nextElementSibling; menu.classList.toggle('show'); return; }
-  document.querySelectorAll('.dropdown-menu.show').forEach(m=>{ if(!m.contains(e.target)) m.classList.remove('show'); });
-});
-
-// View toggle
-btnTable.addEventListener('click',()=>{ tableWrapper.style.display='block'; cardsContainer.style.display='none'; });
-btnCards.addEventListener('click',()=>{ tableWrapper.style.display='none'; cardsContainer.style.display='grid'; });
-
-applyFilters();
-
 function confirmDeleteMember(event, memberName, childrenCount) {
   event.preventDefault();
   let message = '{{ t("Weet je zeker dat je dit lid wilt verwijderen?") }}\n\n' + memberName;
-  
   if (childrenCount > 0) {
     message += '\n\n⚠️ {{ t("Let op: Dit lid heeft") }} ' + childrenCount + ' {{ t("kind(eren) geregistreerd.") }}';
     message += '\n{{ t("Deze worden ook verwijderd!") }}';
   }
-  
   message += '\n\n{{ t("Deze actie kan niet ongedaan gemaakt worden.") }}';
-  
   if (confirm(message)) {
     event.target.submit();
   }
   return false;
 }
 </script>
+<!-- Overzicht fallback verwijderd op verzoek -->
 {% endblock %}

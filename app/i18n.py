@@ -86,6 +86,9 @@ TRANSLATIONS = {
         'Nieuw lid': 'Nouveau membre',
         'Betaling': 'Paiement',
         'No payment': 'Pas de paiement',
+        'Geen betaling': 'Pas de paiement',
+        'Zie kinderen': 'Voir les enfants',
+        'Geen adres': 'Pas d\'adresse',
         # Dashboard specific
         'Actieve leden': 'Membres actifs',
         'Inactieve leden': 'Membres inactifs',
@@ -158,6 +161,18 @@ TRANSLATIONS = {
         # Enhanced dashboard
         'Laatste update': 'Dernière mise à jour',
         'Nu': 'Maintenant',
+        'Gemiddelde verhuurperiode': 'Durée moyenne de location',
+        'Gemiddelde herstellingstijd': 'Temps moyen de réparation',
+        'Verhuuractiviteit': 'Activité de location',
+        'Fietsstatus': 'Statut des vélos',
+        'Actueel': 'Actuel',
+        'Laatste 7 dagen': '7 derniers jours',
+        'Dagen': 'Jours',
+        # Finance section
+        'Finance Management': 'Gestion financière',
+        'Wekelijkse omzet': 'Chiffre d’affaires hebdomadaire',
+        'Laatste 8 weken': '8 dernières semaines',
+        'Betalingsmethoden overzicht': 'Aperçu des méthodes de paiement',
         'Totale fietsen': 'Total vélos',
         'Vandaag': "Aujourd'hui",
         'nieuwe ingeleverd': 'nouveaux ajoutés',

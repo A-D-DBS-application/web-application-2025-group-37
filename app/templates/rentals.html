@@ -5,7 +5,7 @@
   <!-- Header -->
   <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
     <h1 class="text-3xl font-bold text-gray-900">{{ t('Actieve verhuringen') }}</h1>
-    <a href="{{ url_for('main.inventory') }}" class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold transition-all shadow-lg hover:shadow-xl" style="background: linear-gradient(135deg, #ee6c4d 0%, #d55a3e 100%);">
+    <a href="{{ url_for('main.rental_new') }}" class="btn btn-primary">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
       </svg>
@@ -13,34 +13,7 @@
     </a>
   </div>
 
-  <!-- Stats Cards -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    <!-- Card 1: Total Active -->
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-          </svg>
-        </div>
-      </div>
-      <div class="text-3xl font-bold text-gray-900 mb-1">{{ total_active }}</div>
-      <div class="text-sm text-gray-500">{{ t('Totaal actieve verhuringen') }}</div>
-    </div>
-
-    <!-- Card 2: Overdue -->
-    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-      <div class="flex items-center justify-between mb-4">
-        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-          <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-          </svg>
-        </div>
-      </div>
-      <div class="text-3xl font-bold text-gray-900 mb-1">{{ overdue_count }}</div>
-      <div class="text-sm text-gray-500">{{ t('Betaling mist') }}</div>
-    </div>
-  </div>
+  <!-- Stats Cards removed per request -->
 
   <!-- Filter Bar -->
   <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
@@ -92,6 +65,7 @@
           <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Kind') }}</th>
           <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Ouder') }}</th>
           <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Startdatum') }}</th>
+          <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Einddatum') }}</th>
           <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Status') }}</th>
           <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">{{ t('Acties') }}</th>
         </tr>
@@ -101,16 +75,10 @@
         <tr class="hover:bg-gray-50 transition-colors">
           <!-- Bike -->
           <td class="px-6 py-4">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-              </div>
-              <div>
+            <div>
                 <a href="{{ url_for('main.inventory') }}" class="font-medium text-gray-900 hover:text-blue-600">{{ bike.model or bike.brand }}</a>
-                {% if bike.type %}
-                <div class="text-xs text-gray-500">{{ bike.type }}</div>
+                {% if bike.name %}
+                <div class="text-xs text-gray-500">{{ bike.name }}</div>
                 {% endif %}
               </div>
             </div>
@@ -131,6 +99,11 @@
           <!-- Start Date -->
           <td class="px-6 py-4 text-gray-700">
             {{ rental.start_date.strftime('%d/%m/%Y') if rental.start_date else '-' }}
+          </td>
+
+          <!-- End Date -->
+          <td class="px-6 py-4 text-gray-700">
+            {{ rental.end_date.strftime('%d/%m/%Y') if rental.end_date else '-' }}
           </td>
 
           <!-- Status -->
@@ -160,44 +133,20 @@
 
           <!-- Actions -->
           <td class="px-6 py-4 text-right">
-            <div class="relative inline-block text-left">
-              <button type="button" class="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleDropdown(event, 'dropdown-{{ rental.rental_id }}')">
-                <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+            <div class="inline-flex items-center gap-2">
+              <a href="{{ url_for('main.members_payment', member_id=member.member_id) }}" class="icon-btn" aria-label="{{ t('Betalingsgeschiedenis') }}" title="{{ t('Betalingsgeschiedenis') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2" ry="2"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                  <line x1="7" y1="15" x2="8" y2="15"/>
+                  <line x1="11" y1="15" x2="12" y2="15"/>
                 </svg>
+              </a>
+              {% if rental.status == 'active' %}
+              <button onclick="confirmEndRental({{ rental.rental_id }})" class="icon-btn" aria-label="{{ t('Verhuring beëindigen') }}" title="{{ t('Verhuring beëindigen') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
-              <div id="dropdown-{{ rental.rental_id }}" class="hidden absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                <div class="py-1">
-                  <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                    {{ t('Verhuring bekijken') }}
-                  </a>
-                  <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                    {{ t('Verhuring wijzigen') }}
-                  </a>
-                  <a href="{{ url_for('main.members_payment', member_id=member.member_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                    </svg>
-                    {{ t('Betalingsgeschiedenis') }}
-                  </a>
-                  {% if rental.status == 'active' %}
-                  <hr class="my-1">
-                  <button onclick="confirmEndRental({{ rental.rental_id }})" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    {{ t('Verhuring beëindigen') }}
-                  </button>
-                  {% endif %}
-                </div>
-              </div>
+              {% endif %}
             </div>
           </td>
         </tr>
@@ -212,14 +161,9 @@
     <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
       <!-- Bike & Child -->
       <div class="flex items-start gap-4 mb-4">
-        <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-          </svg>
-        </div>
         <div class="flex-1">
           <div class="font-semibold text-gray-900">{{ bike.model or bike.brand }}</div>
-          <div class="text-sm text-gray-500">{{ bike.type or '' }}</div>
+          <div class="text-sm text-gray-500">{{ bike.name or '' }}</div>
           <div class="text-sm font-medium text-gray-700 mt-1">{{ child.first_name }} {{ child.last_name }}</div>
         </div>
         <!-- Status Badge -->
@@ -249,6 +193,10 @@
         <div>
           <div class="text-gray-500">{{ t('Startdatum') }}</div>
           <div class="font-medium text-gray-900">{{ rental.start_date.strftime('%d/%m/%Y') if rental.start_date else '-' }}</div>
+        </div>
+        <div>
+          <div class="text-gray-500">{{ t('Einddatum') }}</div>
+          <div class="font-medium text-gray-900">{{ rental.end_date.strftime('%d/%m/%Y') if rental.end_date else '-' }}</div>
         </div>
       </div>
 

@@ -1,33 +1,71 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 class="text-2xl font-semibold mb-4">{{ t('Nieuw object') }}</h2>
-<form method="POST" class="space-y-4 max-w-xl">
-  <div>
-    <label class="block text-sm font-medium mb-1">{{ t('Object soort') }}</label>
-    <select name="object_kind" required class="border rounded w-full p-2">
-      <option value="">--</option>
-      <option value="fiets">{{ t('Fiets') }}</option>
-      <option value="accessoire">Accessoire</option>
-      <option value="onderdeel">Onderdeel</option>
-      <option value="anders">Anders</option>
-    </select>
+<div class="max-w-3xl mx-auto">
+  <div class="card p-6">
+    <h2 class="text-2xl font-semibold mb-4">{{ t('Nieuw object') }}</h2>
+    <form method="POST" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">{{ t('Type') }}</label>
+        <select name="type_category" id="type_category" required class="border rounded w-full p-2">
+          <option value="">--</option>
+          <option value="fiets">{{ t('Fiets') }}</option>
+          <option value="object">{{ t('Object') }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">{{ t('Naam') }}</label>
+        <input name="name" class="border rounded w-full p-2" required />
+      </div>
+
+      <!-- Bike specific type -->
+      <div id="bike_type_group" class="hidden">
+        <label class="block text-sm font-medium mb-1">{{ t('Specificatie fiets') }}</label>
+        <select name="bike_specific_type" class="border rounded w-full p-2">
+          <option value="gewoon">{{ t('gewoon') }}</option>
+          <option value="elektrisch">{{ t('elektrisch') }}</option>
+        </select>
+      </div>
+
+      <!-- Object extra type -->
+      <div id="object_extra_type_group" class="hidden">
+        <label class="block text-sm font-medium mb-1">{{ t('Extra type') }}</label>
+        <input name="object_extra_type" class="border rounded w-full p-2" placeholder="helm / slot / pomp" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">{{ t('Status') }}</label>
+        <select name="status" class="border rounded w-full p-2">
+          <option value="available">{{ t('beschikbaar') }}</option>
+          <option value="rented">{{ t('onbeschikbaar') }}</option>
+          <option value="repair">{{ t('in herstelling') }}</option>
+        </select>
+      </div>
+      <button class="btn btn-primary">{{ t('Opslaan') }}</button>
+    </form>
   </div>
-  <div>
-    <label class="block text-sm font-medium mb-1">{{ t('Naam') }}</label>
-    <input name="name" class="border rounded w-full p-2" required />
-  </div>
-  <div>
-    <label class="block text-sm font-medium mb-1">{{ t('Type') }}</label>
-    <input name="type" class="border rounded w-full p-2" placeholder="gewoon / elektrisch / helm / slot" />
-  </div>
-  <div>
-    <label class="block text-sm font-medium mb-1">{{ t('Status') }}</label>
-    <select name="status" class="border rounded w-full p-2">
-      <option value="available">{{ t('beschikbaar') }}</option>
-      <option value="rented">{{ t('onbeschikbaar') }}</option>
-      <option value="repair">{{ t('in herstelling') }}</option>
-    </select>
-  </div>
-  <button class="btn btn-primary">{{ t('Opslaan') }}</button>
-</form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('type_category');
+    const bikeGroup = document.getElementById('bike_type_group');
+    const objGroup = document.getElementById('object_extra_type_group');
+    function sync() {
+      const v = (select.value || '').toLowerCase();
+      if (v === 'fiets') {
+        bikeGroup.classList.remove('hidden');
+        objGroup.classList.add('hidden');
+      } else if (v === 'object') {
+        bikeGroup.classList.add('hidden');
+        objGroup.classList.remove('hidden');
+      } else {
+        bikeGroup.classList.add('hidden');
+        objGroup.classList.add('hidden');
+      }
+    }
+    select.addEventListener('change', sync);
+    sync();
+  });
+</script>
 {% endblock %}

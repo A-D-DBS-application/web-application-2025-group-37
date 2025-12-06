@@ -1,192 +1,277 @@
 {% extends 'base.html' %}
 {% block content %}
+{% macro status_fr(s) %}
+  {% set key = (s or '-')|lower %}
+  {% set map = {
+    'available': 'Disponible',
+    'beschikbaar': 'Disponible',
+    'rented': 'Loué',
+    'verhuurd': 'Loué',
+    'repair': 'En réparation',
+    'in herstelling': 'En réparation',
+    'unavailable': 'Indisponible',
+    'onbeschikbaar': 'Indisponible',
+    '-': '-' 
+  } %}
+  {{ map.get(key, s) }}
+{% endmacro %}
+
+{% macro type_fr(s) %}
+  {% set key = (s or '-')|lower %}
+  {% set map = {
+    'gewoon': 'Ordinaire',
+    'elektrisch': 'Électrique',
+    'helm': 'Casque',
+    'unknown': 'Inconnu',
+    'onbekend': 'Inconnu',
+    'fiets': 'Vélo'
+  } %}
+  {{ map.get(key, s) }}
+{% endmacro %}
+{% macro status_fr(s) %}
+  {% set key = (s or '-')|lower %}
+  {% set map = {
+    'available': 'Disponible',
+    'beschikbaar': 'Disponible',
+    'rented': 'Loué',
+    'verhuurd': 'Loué',
+    'repair': 'En réparation',
+    'in herstelling': 'En réparation',
+    'unavailable': 'Indisponible',
+    'onbeschikbaar': 'Indisponible',
+    '-': '-' 
+  } %}
+  {{ map.get(key, s) }}
+{% endmacro %}
 <div class="flex items-center justify-between mb-4">
   <div>
     <h2 class="text-2xl md:text-3xl font-semibold">{{ t('Inventaris') }}</h2>
     <div class="text-sm text-gray-600 mt-1">{{ available_bikes|length }} {{ t('Beschikbare fietsen') }}</div>
   </div>
   <div class="flex gap-2">
-            <a href="{{ url_for('main.objects_new') }}" class="btn btn-primary">{{ t('Nieuw object') }}</a>
+    <a href="{{ url_for('main.objects_new') }}" class="btn btn-primary">{{ t('Nieuw object') }}</a>
   </div>
 </div>
 
-<!-- Block: Fietsen (stacked for readability) -->
+<!-- Insights removed to restore previous inventory layout -->
+
 <div class="inventory-table-wrapper card p-4 mb-8">
   <h3 class="text-lg font-semibold mb-4">{{ t('Fietsen') }}</h3>
-
-  <!-- Beschikbare fietsen -->
   <div class="border rounded bg-white shadow-sm mb-6">
     <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
-        <span>{{ t('Beschikbare fietsen') }} ({{ available_bikes|length }})</span>
-        <span class="text-xs text-green-700 font-medium">{{ available_bikes|length }} {{ t('beschikbaar') }}</span>
-      </div>
+      <span>{{ t('Beschikbare fietsen') }} ({{ available_bikes|length }})</span>
+      <span class="text-xs text-green-700 font-medium">{{ available_bikes|length }} {{ t('beschikbaar') }}</span>
+    </div>
     <table class="w-full text-left text-sm">
-        <thead class="bg-gray-50">
-          <tr>
-                <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
-                <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
-                <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
-                <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for b in available_bikes %}
-          <tr class="border-t">
-            <td class="py-2 px-3 font-medium">{{ b.name }}</td>
-            <td class="py-2 px-3">{{ b.type or '-' }}</td>
-            <td class="py-2 px-3 text-xs text-gray-500">-</td>
-                <td class="py-2 px-3 text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <a href="{{ url_for('main.rent_bike_action', bike_id=b.bike_id) }}" class="btn btn-primary btn-sm">{{ t('Verhuren') }}</a>
-                    <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="inline-flex items-center gap-2">
-                      <select name="status" class="border rounded p-1 text-xs">
-                        <option value="available" selected>{{ t('beschikbaar') }}</option>
-                        <option value="rented">{{ t('onbeschikbaar') }}</option>
-                        <option value="repair">{{ t('in herstelling') }}</option>
-                      </select>
-                      <button class="icon-btn icon-btn-primary" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
-                      </button>
-                    </form>
-                  </div>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
+          <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for b in available_bikes %}
+        <tr class="border-t">
+          <td class="py-2 px-3 font-medium">{{ b.name }}</td>
+          <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(b.type or '-') }}{% else %}{{ b.type or '-' }}{% endif %}</td>
+          <td class="py-2 px-3 text-xs text-gray-500">-</td>
+          <td class="py-2 px-3 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <a href="{{ url_for('main.rent_bike_action', bike_id=b.bike_id) }}" class="btn btn-primary btn-sm">{{ t('Verhuren') }}</a>
+              <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirm('Fiets verwijderen?');">
+                <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 
-  <!-- Onbeschikbare fietsen -->
   <div class="border rounded bg-white shadow-sm mb-6">
     <div class="px-4 py-2 border-b font-medium">{{ t('Onbeschikbare fietsen') }} ({{ rented_bikes|length }})</div>
     <table class="w-full text-left text-sm">
-        <thead class="bg-gray-50">
-          <tr>
-              <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
-              <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
-              <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
-              <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for b in rented_bikes %}
-          <tr class="border-t">
-            <td class="py-2 px-3 font-medium">{{ b.name }}</td>
-            <td class="py-2 px-3">{{ b.type or '-' }}</td>
-            <td class="py-2 px-3">
-              {% set r = rental_map.get(b.bike_id) %}
-              {% if r %}
-                <span class="text-xs">{{ r.member.first_name }} {{ r.member.last_name }}</span>
-              {% else %}
-                <span class="text-xs text-gray-500">-</span>
-              {% endif %}
-            </td>
-              <td class="py-2 px-3 text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="inline-flex items-center gap-2">
-                    <select name="status" class="border rounded p-1 text-xs">
-                      <option value="available">{{ t('beschikbaar') }}</option>
-                      <option value="rented" selected>{{ t('onbeschikbaar') }}</option>
-                      <option value="repair">{{ t('in herstelling') }}</option>
-                    </select>
-                    <button class="icon-btn icon-btn-primary" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
-                    </button>
-                  </form>
-                </div>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
+          <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for b in rented_bikes %}
+        <tr class="border-t">
+          <td class="py-2 px-3 font-medium">{{ b.name }}</td>
+          <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(b.type or '-') }}{% else %}{{ b.type or '-' }}{% endif %}</td>
+          <td class="py-2 px-3">
+            {% set renter = rental_map.get(b.bike_id) %}
+            <span class="text-xs">{{ renter or '-' }}</span>
+          </td>
+          <td class="py-2 px-3 text-right">
+            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirm('Fiets verwijderen?');">
+              <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 
-  <!-- Fietsen in herstelling -->
   <div class="border rounded bg-white shadow-sm">
     <div class="px-4 py-2 border-b font-medium">{{ t('Fietsen in herstelling') }} ({{ repair_bikes|length }})</div>
     <table class="w-full text-left text-sm">
-        <thead class="bg-gray-50">
-          <tr>
-              <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
-              <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
-              <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
-              <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for b in repair_bikes %}
-          <tr class="border-t">
-            <td class="py-2 px-3 font-medium">{{ b.name }}</td>
-            <td class="py-2 px-3">{{ b.type or '-' }}</td>
-            <td class="py-2 px-3 text-xs text-gray-500">-</td>
-              <td class="py-2 px-3 text-right">
-              <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="inline-flex items-center gap-2">
-                <select name="status" class="border rounded p-1 text-xs">
-                  <option value="available">{{ t('beschikbaar') }}</option>
-                  <option value="rented">{{ t('onbeschikbaar') }}</option>
-                  <option value="repair" selected>{{ t('in herstelling') }}</option>
-                </select>
-                <button class="icon-btn icon-btn-primary" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
-                </button>
-              </form>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
+          <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for b in repair_bikes %}
+        <tr class="border-t">
+          <td class="py-2 px-3 font-medium">{{ b.name }}</td>
+          <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(b.type or '-') }}{% else %}{{ b.type or '-' }}{% endif %}</td>
+          <td class="py-2 px-3 text-xs text-gray-500">-</td>
+          <td class="py-2 px-3 text-right">
+            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirm('Fiets verwijderen?');">
+              <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen fietsen in deze categorie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 
-<!-- Block: Objecten -->
 <div class="inventory-table-wrapper card p-4">
   <h3 class="text-lg font-semibold mb-4">{{ t('Objecten') }}</h3>
-  <table class="w-full text-left text-sm">
-    <thead class="bg-gray-50">
-      <tr>
-        <th class="py-2 px-3">{{ t('Naam') }}</th>
-        <th class="py-2 px-3">{{ t('Type') }}</th>
-        <th class="py-2 px-3">{{ t('Status') }}</th>
-        <th class="py-2 px-3 text-right">{{ t('Acties') }}</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for i in items %}
-      <tr class="border-t">
-        <td class="py-2 px-3 font-medium">{{ i.name }}</td>
-        <td class="py-2 px-3">{{ i.type or '-' }}</td>
-        <td class="py-2 px-3">
-          {% set status_map = {'available': t('beschikbaar'), 'rented': t('onbeschikbaar'), 'repair': t('in herstelling')} %}
-          <span class="badge {% if i.status=='available' %}badge-success{% elif i.status=='repair' %}badge-warning{% else %}badge-danger{% endif %}">{{ status_map.get(i.status, i.status) }}</span>
-        </td>
-        <td class="py-2 px-3 text-right">
-          <form method="POST" action="{{ url_for('main.items_status', item_id=i.item_id) }}" class="inline-flex items-center gap-2">
-            <select name="status" class="border rounded p-1 text-xs">
-              <option value="available" {{ 'selected' if i.status=='available' else '' }}>{{ t('beschikbaar') }}</option>
-              <option value="rented" {{ 'selected' if i.status=='rented' else '' }}>{{ t('onbeschikbaar') }}</option>
-              <option value="repair" {{ 'selected' if i.status=='repair' else '' }}>{{ t('in herstelling') }}</option>
-            </select>
-            <button class="icon-btn icon-btn-primary" aria-label="{{ t('Opslaan') }}" title="{{ t('Opslaan') }}">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21V13H7v8"/><path d="M7 3v5h8"/></svg>
-            </button>
-          </form>
-          <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block ml-2" onsubmit="return confirm('Verwijderen?');">
-            <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
-            </button>
-          </form>
-        </td>
-      </tr>
-    {% else %}
-      <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen objecten.') }}</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  
+
+  <div class="border rounded bg-white shadow-sm mb-6">
+    <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
+      <span>{{ t('Beschikbare objecten') }} ({{ available_items|length }})</span>
+    </div>
+    <table class="w-full text-left text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
+          <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in available_items %}
+        <tr class="border-t">
+          <td class="py-2 px-3 font-medium">{{ i.name }}</td>
+          <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(i.type or '-') }}{% else %}{{ i.type or '-' }}{% endif %}</td>
+          <td class="py-2 px-3 text-xs text-gray-500">-</td>
+          <td class="py-2 px-3 text-right">
+            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirm(t('Object verwijderen?'));">
+              <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen objecten in deze categorie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="border rounded bg-white shadow-sm mb-6">
+    <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
+      <span>{{ t('Onbeschikbare objecten') }} ({{ rented_items|length }})</span>
+    </div>
+    <table class="w-full text-left text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
+          <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in rented_items %}
+        <tr class="border-t">
+          <td class="py-2 px-3 font-medium">{{ i.name }}</td>
+          <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(i.type or '-') }}{% else %}{{ i.type or '-' }}{% endif %}</td>
+          <td class="py-2 px-3">
+            {% set renter = item_rental_map.get(i.item_id) %}
+            <span class="text-xs">{{ renter or '-' }}</span>
+          </td>
+          <td class="py-2 px-3 text-right">
+            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirm(t('Object verwijderen?'));">
+              <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen objecten in deze categorie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="border rounded bg-white shadow-sm">
+    <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
+      <span>{{ t('Objecten in herstelling') }} ({{ repair_items|length }})</span>
+    </div>
+    <table class="w-full text-left text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="py-2 px-3 w-1/4">{{ t('Naam') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Type') }}</th>
+          <th class="py-2 px-3 w-1/4">{{ t('Verhuurd door') }}</th>
+          <th class="py-2 px-3 w-1/4 text-right">{{ t('Acties') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for i in repair_items %}
+        <tr class="border-t">
+          <td class="py-2 px-3 font-medium">{{ i.name }}</td>
+          <td class="py-2 px-3">{{ i.type or '-' }}</td>
+          <td class="py-2 px-3 text-xs text-gray-500">-</td>
+          <td class="py-2 px-3 text-right">
+            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirm(t('Object verwijderen?'));">
+              <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="py-4 px-3 text-gray-500 text-center">{{ t('Geen objecten in deze categorie.') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+
 {% endblock %}
+

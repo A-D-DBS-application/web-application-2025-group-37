@@ -9,7 +9,7 @@ with app.app_context():
         # Check if users already exist
         existing = User.query.filter(User.email.in_(['depot@opwielekes.be', 'finance@opwielekes.be', 'admin@opwielekes.be'])).all()
         if existing:
-            print(f"Found {len(existing)} existing users, deleting them first...")
+            print(f"Found {len(existing)} existing users, deleti            typeof bootstrapng them first...")
             for user in existing:
                 db.session.delete(user)
             db.session.commit()

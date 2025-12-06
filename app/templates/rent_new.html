@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card p-6 max-w-xl mx-auto">
+  <h2 class="text-2xl font-semibold mb-1">Nieuwe verhuring</h2>
+  <p class="text-sm text-gray-600 mb-4">Selecteer lid, fiets, optioneel kind en datums.</p>
+  <form method="POST" class="space-y-4">
+    <div>
+      <label class="block mb-1 font-medium">Lid</label>
+      <select name="member_id" id="member_id" class="border w-full rounded p-2" required>
+        <option value="">-- Kies lid --</option>
+        {% for m in members %}
+        <option value="{{ m.member_id }}">{{ m.last_name }}, {{ m.first_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block mb-1 font-medium">Kind (optioneel)</label>
+      <select name="child_id" id="child_id" class="border w-full rounded p-2">
+        <option value="">Geen kind</option>
+        {% for c in children %}
+        <option value="{{ c.child_id }}" data-member="{{ c.member_id }}">{{ c.first_name }} {{ c.last_name }}</option>
+        {% endfor %}
+      </select>
+      <p class="text-xs text-gray-500 mt-1">Filtert automatisch op gekozen lid.</p>
+    </div>
+
+    <div>
+      <label class="block mb-1 font-medium">Fiets</label>
+      <select name="bike_id" class="border w-full rounded p-2" required>
+        <option value="">-- Kies beschikbare fiets --</option>
+        {% for b in available_bikes %}
+        <option value="{{ b.bike_id }}">{{ b.name }} ({{ b.type or '-' }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block mb-1 font-medium">Startdatum</label>
+        <input type="date" name="start_date" class="border w-full rounded p-2" value="{{ today }}">
+      </div>
+      <div>
+        <label class="block mb-1 font-medium">Einddatum (optioneel)</label>
+        <input type="date" name="end_date" class="border w-full rounded p-2">
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button class="btn btn-primary">Verhuren</button>
+      <a class="btn" href="{{ url_for('main.rentals_list') }}">Annuleren</a>
+    </div>
+  </form>
+</div>
+
+<script>
+// Filter children by selected member
+const memberSelect = document.getElementById('member_id');
+const childSelect = document.getElementById('child_id');
+function filterChildren() {
+  const mid = memberSelect.value;
+  [...childSelect.options].forEach(opt => {
+    if (!opt.value) { opt.hidden = false; return; }
+    opt.hidden = !!(mid && opt.dataset.member && opt.dataset.member !== mid);
+  });
+}
+memberSelect.addEventListener('change', filterChildren);
+filterChildren();
+</script>
+{% endblock %}

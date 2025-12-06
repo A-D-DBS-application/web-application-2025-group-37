@@ -1,0 +1,39 @@
+==================================================================================
+                    FIX INSTRUCTIONS - DATABASE MIGRATION VEREIST
+==================================================================================
+
+HET PROBLEEM:
+De applicatie crasht met: "column bike.code does not exist"
+Dit betekent dat de database niet up-to-date is met de code.
+
+==================================================================================
+
+OPLOSSING - VOER DE MIGRATIE UIT:
+==================================
+
+STAP 1: Stop Flask (druk CTRL+C in het Flask terminal venster)
+
+STAP 2: Voer de migratie uit door DUBBELKLIKKEN op:
+        
+        run_bike_code_migration.bat
+
+        (Dit bestand staat in de hoofdmap van het project)
+
+STAP 3: Wacht tot je ziet: "✓ Code column added successfully to bike table"
+
+STAP 4: Herstart Flask met: flask run
+
+==================================================================================
+
+ALTERNATIEF (als dubbelklikken niet werkt):
+============================================
+
+Open een nieuw terminal venster en voer uit:
+
+cd c:\Users\chiri\Documents\GitHub\web-application-2025-group-37
+.venv\Scripts\python.exe add_bike_code_column.py
+
+==================================================================================
+
+Na het uitvoeren van de migratie zou alles moeten werken!
+De inventaris pagina zal nu correct laden.

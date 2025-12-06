@@ -62,36 +62,132 @@ def finance_access_required(f):
     """Shortcut decorator voor Finance Manager toegang"""
     return role_required('finance_manager', 'admin')(f)
 
-# Dummy data (je kunt dit later koppelen aan een echte DB)
-bikes = [
-    {"id": 1, "name": "Gazelle CityGo", "type": "Stadsfiets", "status": "Beschikbaar"},
-    {"id": 2, "name": "Cortina E-U4", "type": "Elektrische fiets", "status": "Verhuurd"},
-    {"id": 3, "name": "Batavus Quip", "type": "Stadsfiets", "status": "Beschikbaar"}
-]
-
-@main.route('/')
-def home():
-    # Home is the Depot Manager login. If already logged in, ga naar dashboard.
-    if session.get('user_id'):
-        return redirect(url_for('main.dashboard'))
-    return render_template('login.html')
-
-@main.route('/inventory')
-@login_required
-def inventory():
-    bike_base = Bike.query.filter_by(archived=False)
-    available_bikes = bike_base.filter_by(status='available').order_by(Bike.created_at.desc()).all()
-    rented_bikes = bike_base.filter_by(status='rented').order_by(Bike.created_at.desc()).all()
-    repair_bikes = bike_base.filter_by(status='repair').order_by(Bike.created_at.desc()).all()
-    # Active rentals map for rented bikes (status 'active')
-    rentals = Rental.query.filter_by(status='active').all()
-    rental_map = {r.bike_id: r for r in rentals}
-    items = Item.query.filter_by(archived=False).order_by(Item.created_at.desc()).all()
-    return render_template('inventory.html', available_bikes=available_bikes, rented_bikes=rented_bikes, repair_bikes=repair_bikes, items=items, rental_map=rental_map)
-
 @main.route('/bikes')
 def bike_list():
     return redirect(url_for('main.inventory'))
+
+# -----------------------
+# Inventory overview
+# -----------------------
+
+@main.route('/')
+def home():
+    # Classic flow: show login when not authenticated, dashboard when logged in
+    if session.get('user_id'):
+        return redirect(url_for('main.dashboard'))
+    return redirect(url_for('main.login'))
+
+@main.route('/inventory')
+@login_required
+@depot_access_required
+def inventory():
+    # Bikes
+    bikes_all = Bike.query.filter_by(archived=False).order_by(Bike.created_at.desc()).all()
+    available_bikes = [b for b in bikes_all if (b.status or '').lower() == 'available']
+    rented_bikes = [b for b in bikes_all if (b.status or '').lower() == 'rented']
+    repair_bikes = [b for b in bikes_all if (b.status or '').lower() == 'repair']
+
+    # Map active rentals to show renter info
+    active_rentals = Rental.query.filter_by(status='active').all()
+    rental_map = {}
+    for r in active_rentals:
+        renter = None
+        if r.member:
+            renter = f"{r.member.first_name} {r.member.last_name}"
+        elif r.child and r.child.member:
+            renter = f"{r.child.member.first_name} {r.child.member.last_name}"
+        if r.bike_id:
+            rental_map[r.bike_id] = renter
+
+    # Items (generic objects)
+    items_all = Item.query.order_by(Item.created_at.desc()).all()
+    def norm_item_status(s):
+        s = (s or '').strip().lower()
+        mapping = {
+            'beschikbaar': 'available',
+            'onbeschikbaar': 'unavailable',
+            'verhuurd': 'rented',
+            'in herstelling': 'repair'
+        }
+        return mapping.get(s, s)
+
+    available_items = [i for i in items_all if norm_item_status(i.status) == 'available']
+    unavailable_items = [i for i in items_all if norm_item_status(i.status) in {'unavailable', 'rented'}]
+    rented_items = [i for i in items_all if norm_item_status(i.status) in {'unavailable', 'rented'}]
+    repair_items = [i for i in items_all if norm_item_status(i.status) == 'repair']
+
+    # Items currently don't have rentals; provide empty map to satisfy template
+    item_rental_map = {}
+
+    # Simple repair stats for insights card
+    repair_stats = {
+        'total_in_repair': len(repair_bikes),
+        'avg_repair_time': 0,
+        'bikes': repair_bikes
+    }
+
+    return render_template(
+        'inventory.html',
+        available_bikes=available_bikes,
+        rented_bikes=rented_bikes,
+        repair_bikes=repair_bikes,
+        repair_stats=repair_stats,
+        rental_map=rental_map,
+        available_items=available_items,
+        unavailable_items=unavailable_items,
+        rented_items=rented_items,
+        repair_items=repair_items,
+        item_rental_map=item_rental_map,
+        items_all=items_all
+    )
+
+@main.route('/inventory-public')
+def inventory_public():
+    # Reuse same logic as inventory without auth for testing
+    bikes_all = Bike.query.filter_by(archived=False).order_by(Bike.created_at.desc()).all()
+    available_bikes = [b for b in bikes_all if (b.status or '').lower() == 'available']
+    rented_bikes = [b for b in bikes_all if (b.status or '').lower() == 'rented']
+    repair_bikes = [b for b in bikes_all if (b.status or '').lower() == 'repair']
+
+    active_rentals = Rental.query.filter_by(status='active').all()
+    rental_map = {}
+    for r in active_rentals:
+        renter = None
+        if r.member:
+            renter = f"{r.member.first_name} {r.member.last_name}"
+        elif r.child and r.child.member:
+            renter = f"{r.child.member.first_name} {r.child.member.last_name}"
+        if r.bike_id:
+            rental_map[r.bike_id] = renter
+
+    items_all = Item.query.order_by(Item.created_at.desc()).all()
+    def norm_item_status(s):
+        s = (s or '').strip().lower()
+        mapping = {
+            'beschikbaar': 'available',
+            'onbeschikbaar': 'unavailable',
+            'verhuurd': 'rented',
+            'in herstelling': 'repair'
+        }
+        return mapping.get(s, s)
+
+    available_items = [i for i in items_all if norm_item_status(i.status) == 'available']
+    rented_items = [i for i in items_all if norm_item_status(i.status) in {'unavailable', 'rented'}]
+    repair_items = [i for i in items_all if norm_item_status(i.status) == 'repair']
+    item_rental_map = {}
+
+    return render_template(
+        'inventory.html',
+        available_bikes=available_bikes,
+        rented_bikes=rented_bikes,
+        repair_bikes=repair_bikes,
+        rental_map=rental_map,
+        available_items=available_items,
+        rented_items=rented_items,
+        repair_items=repair_items,
+        item_rental_map=item_rental_map,
+        items_all=items_all
+    )
 
 # -----------------------
 # Password reset (simplified placeholder)
@@ -208,40 +304,77 @@ def logout():
 
 @main.route('/members')
 @login_required
+@depot_access_required
 def members_list():
+    # Build a combined view: ORM + optional public tables (if present)
     all_members = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
-    # Duplicate detection (email / phone)
-    email_counts = {}
-    phone_counts = {}
-    for m in all_members:
-        if m.email:
-            email_counts[m.email.lower()] = email_counts.get(m.email.lower(), 0) + 1
-        if m.phone:
-            phone_counts[m.phone] = phone_counts.get(m.phone, 0) + 1
-    duplicate_emails = {e for e, c in email_counts.items() if c > 1}
-    duplicate_phones = {p for p, c in phone_counts.items() if c > 1}
+    combined = list(all_members)
+    try:
+        from types import SimpleNamespace
+        with db.engine.begin() as conn:
+            for table_name in ['public."Members"', 'public."Member"']:
+                try:
+                    rows = conn.execute(text(f'SELECT member_id, first_name, last_name, email, phone, address, last_payment, status FROM {table_name} ORDER BY last_name, first_name')).mappings().all()
+                    for r in rows:
+                        combined.append(SimpleNamespace(
+                            member_id=r.get('member_id'),
+                            first_name=r.get('first_name'),
+                            last_name=r.get('last_name'),
+                            email=r.get('email'),
+                            phone=r.get('phone'),
+                            address=r.get('address'),
+                            last_payment=r.get('last_payment'),
+                            status=r.get('status'),
+                            children=[]
+                        ))
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    # De-duplicate by (member_id or email+phone)
+    seen_ids = set()
+    seen_keys = set()
+    unique_members = []
+    for m in combined:
+        mid = getattr(m, 'member_id', None)
+        key = (getattr(m, 'email', '') or '').lower(), (getattr(m, 'phone', '') or '').strip()
+        if mid and mid in seen_ids:
+            continue
+        if key in seen_keys:
+            continue
+        if mid:
+            seen_ids.add(mid)
+        seen_keys.add(key)
+        unique_members.append(m)
+    all_members = unique_members
+    # Normalize statuses (nl -> en) for grouping
+    def norm_status(s):
+        s = (s or '').strip().lower()
+        mapping = {'actief':'active','inactief':'inactive','gepauzeerd':'inactive'}
+        return mapping.get(s, s if s in {'active','inactive'} else 'active')
 
-    # Build lightweight view model list
-    today = date.today()
-    members_vm = []
-    for m in all_members:
-        last_payment = m.last_payment
-        if not last_payment:
-            payment_status = 'none'
-        else:
-            days = (today - last_payment).days
-            payment_status = 'overdue' if days > 365 else 'ok'
-        members_vm.append({
-            'member': m,
-            'children_count': len(m.children),
-            'duplicate': (m.email and m.email.lower() in duplicate_emails) or (m.phone and m.phone in duplicate_phones),
-            'payment_status': payment_status,
-        })
-    return render_template('members.html', members=members_vm)
+    # Group as plain Member objects for templates
+    # Rules: 'actief' => active, 'inactief' or 'gepauzeerd' => inactive, anything else or empty => active
+    def is_active_member(m):
+        s = (getattr(m, 'status', '') or '').strip().lower()
+        return s in {'active', 'actief', ''}
+    def is_inactive_member(m):
+        s = (getattr(m, 'status', '') or '').strip().lower()
+        return s in {'inactive', 'inactief', 'gepauzeerd', 'paused'}
+
+    active_members = [m for m in all_members if is_active_member(m)]
+    inactive_members = [m for m in all_members if is_inactive_member(m)]
+
+    # Safety fallback: if both groups are empty but there are members, show all as active
+    if not active_members and not inactive_members and all_members:
+        active_members = all_members
+
+    return render_template('members.html', active_members=active_members, inactive_members=inactive_members, today=date.today())
 
 
 @main.route('/members/<member_id>/children', methods=['GET'])
 @login_required
+@depot_access_required
 def members_children(member_id):
     member = Member.query.get_or_404(member_id)
     children = Child.query.filter_by(member_id=member.member_id).all()
@@ -254,6 +387,7 @@ def members_children(member_id):
 
 @main.route('/members/<member_id>/children/add', methods=['POST'])
 @login_required
+@depot_access_required
 def members_children_add(member_id):
     member = Member.query.get_or_404(member_id)
     fn = (request.form.get('first_name') or '').strip()
@@ -266,6 +400,7 @@ def members_children_add(member_id):
 
 @main.route('/members/<member_id>/children/<child_id>/assign', methods=['POST'])
 @login_required
+@depot_access_required
 def members_children_assign(member_id, child_id):
     member = Member.query.get_or_404(member_id)
     child = Child.query.get_or_404(child_id)
@@ -284,6 +419,7 @@ def members_children_assign(member_id, child_id):
 
 @main.route('/rentals')
 @login_required
+@role_required('depot_manager','finance_manager','admin')
 def rentals_list():
     """Rentals overview page with filters"""
     from sqlalchemy import func
@@ -366,10 +502,70 @@ def rentals_list():
         thirty_days_ago=thirty_days_ago
     )
 
+# New rental creation page
+@main.route('/rentals/new', methods=['GET','POST'])
+@login_required
+@depot_access_required
+def rental_new():
+    if request.method == 'POST':
+        member_id = request.form.get('member_id')
+        bike_id = request.form.get('bike_id')
+        child_id = request.form.get('child_id') or None
+        start_date_raw = request.form.get('start_date')
+        end_date_raw = request.form.get('end_date')
+        # Safe parse ISO dates (yyyy-mm-dd); fallback to today/None
+        start_date = None
+        end_date = None
+        try:
+            start_date = date.fromisoformat(start_date_raw) if start_date_raw else date.today()
+        except Exception:
+            start_date = date.today()
+        try:
+            end_date = date.fromisoformat(end_date_raw) if end_date_raw else None
+        except Exception:
+            end_date = None
+
+        bike = Bike.query.get_or_404(bike_id)
+        if bike.archived or (bike.status or '').lower() != 'available':
+            flash('Geselecteerde fiets is niet beschikbaar.', 'error')
+            return redirect(url_for('main.rental_new'))
+
+        rental = Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id, start_date=start_date, end_date=end_date)
+        db.session.add(rental)
+        bike.status = 'rented'
+        db.session.commit()
+        flash('Verhuring aangemaakt.', 'success')
+        return redirect(url_for('main.rentals_list'))
+
+    members = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
+    available_bikes = Bike.query.filter_by(status='available', archived=False).order_by(Bike.created_at.desc()).all()
+    # Children list can be filtered client-side when a member is selected; provide all with member mapping
+    children = Child.query.all()
+    return render_template('rent_new.html', members=members, available_bikes=available_bikes, children=children, today=date.today().strftime('%Y-%m-%d'))
+
+
+# Simple in-memory cache for dashboard data to reduce load
+_dashboard_cache = {
+    'timestamp': None,
+    'data': None
+}
 
 @main.route('/dashboard')
 @login_required
 def dashboard():
+    from time import perf_counter
+    t0 = perf_counter()
+    # Serve cached data for up to 30 seconds to avoid heavy recomputation
+    try:
+        from datetime import datetime, timedelta
+        if _dashboard_cache['timestamp'] and _dashboard_cache['data']:
+            if datetime.utcnow() - _dashboard_cache['timestamp'] < timedelta(seconds=30):
+                ctx = _dashboard_cache['data']
+                ctx['now'] = date.today()  # update volatile value
+                return render_template('dashboard.html', **ctx)
+    except Exception:
+        # If cache fails, continue without cache
+        pass
     from datetime import timedelta
     from sqlalchemy import func, and_, case, desc
     
@@ -515,23 +711,54 @@ def dashboard():
     member_pie_labels = ['Actief', 'Inactief', 'Gepauzeerd', 'Nieuw (30d)']
     member_pie_values = [active_members_count, inactive_members, paused_members, new_members_last_30]
     
-    # === BIKE CATEGORIES ===
-    # Group by type
-    bike_categories_raw = db.session.query(
-        Bike.type,
-        func.count(Bike.bike_id).label('total'),
-        func.sum(case((Bike.status == 'available', 1), else_=0)).label('available'),
-        func.sum(case((Bike.status == 'rented', 1), else_=0)).label('rented')
-    ).filter(Bike.archived == False).group_by(Bike.type).all()
-    
-    bike_categories = []
-    for cat in bike_categories_raw:
-        bike_categories.append({
-            'name': cat.type or 'Onbekend',
-            'total': cat.total,
-            'available': cat.available or 0,
-            'rented': cat.rented or 0
-        })
+    # === BIKE CATEGORIES (normalized, title-cased, with repair) ===
+    bikes_all = Bike.query.filter_by(archived=False).all()
+    bike_cat_map = {}
+    for b in bikes_all:
+        raw = (b.type or 'Onbekend').strip()
+        key = raw.lower()
+        name = raw.title()
+        if key not in bike_cat_map:
+            bike_cat_map[key] = {'name': name, 'total': 0, 'available': 0, 'rented': 0, 'repair': 0}
+        cat = bike_cat_map[key]
+        cat['total'] += 1
+        status = (b.status or '').strip().lower()
+        if status == 'available':
+            cat['available'] += 1
+        elif status == 'rented':
+            cat['rented'] += 1
+        elif status == 'repair':
+            cat['repair'] += 1
+    bike_categories = list(bike_cat_map.values())
+
+    # === ITEM CATEGORIES (normalized, title-cased, with repair) ===
+    items_all = Item.query.all()
+    item_cat_map = {}
+    def norm_item_status(s):
+        s = (s or '').strip().lower()
+        mapping = {
+            'beschikbaar': 'available',
+            'onbeschikbaar': 'unavailable',
+            'verhuurd': 'rented',
+            'in herstelling': 'repair'
+        }
+        return mapping.get(s, s)
+    for i in items_all:
+        raw = (i.type or 'Onbekend').strip()
+        key = raw.lower()
+        name = raw.title()
+        if key not in item_cat_map:
+            item_cat_map[key] = {'name': name, 'total': 0, 'available': 0, 'rented': 0, 'repair': 0}
+        cat = item_cat_map[key]
+        cat['total'] += 1
+        status = norm_item_status(i.status)
+        if status == 'available':
+            cat['available'] += 1
+        elif status in {'rented', 'unavailable'}:
+            cat['rented'] += 1
+        elif status == 'repair':
+            cat['repair'] += 1
+    item_categories = list(item_cat_map.values())
     
     # === ALERTS / TO-DO ===
     alerts = []
@@ -701,18 +928,20 @@ def dashboard():
         ~Bike.bike_id.in_(db.session.query(thirty_days_rentals))
     ).limit(10).all()
     
-    # === PAYMENT INSIGHTS ===
-    # Monthly payments for chart (last 6 months)
-    payment_months = []
+    # === PAYMENT INSIGHTS (Weekly) ===
+    # Weekly payments for chart (last 8 weeks)
+    payment_weeks = []
     payment_amounts = []
-    for i in range(5, -1, -1):
-        month_date = today.replace(day=1) - timedelta(days=30*i)
-        next_month = (month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+    # Determine start of current week (Monday)
+    start_of_week = today - timedelta(days=today.weekday())
+    for i in range(7, -1, -1):
+        week_start = start_of_week - timedelta(weeks=i)
+        week_end = week_start + timedelta(days=7)
         amount = db.session.query(func.sum(Payment.amount)).filter(
-            Payment.paid_at >= month_date,
-            Payment.paid_at < next_month
+            Payment.paid_at >= week_start,
+            Payment.paid_at < week_end
         ).scalar() or 0
-        payment_months.append(month_date.strftime('%b'))
+        payment_weeks.append(f"{week_start.strftime('%d/%m')} - {(week_end - timedelta(days=1)).strftime('%d/%m')}")
         payment_amounts.append(float(amount))
     
     # Biggest debtors
@@ -766,7 +995,7 @@ def dashboard():
     bike_availability_percentage = round((available_bikes_count / total_bikes * 100) if total_bikes > 0 else 0, 1)
     children_with_bike_percentage = round(((total_children - children_without_bike) / total_children * 100) if total_children > 0 else 0, 1)
     
-    return render_template('dashboard.html',
+    ctx = dict(
         # Card 1: Bikes (extended)
         total_bikes=total_bikes,
         available_bikes_count=available_bikes_count,
@@ -811,10 +1040,11 @@ def dashboard():
         inventory_chart_labels=inventory_chart_labels,
         inventory_chart_available=inventory_chart_available,
         inventory_chart_rented=inventory_chart_rented,
-        payment_months=payment_months,
+        payment_weeks=payment_weeks,
         payment_amounts=payment_amounts,
         # Categories
         bike_categories=bike_categories,
+        item_categories=item_categories,
         # To-do list
         todo_items=todo_items,
         # Popular models
@@ -837,9 +1067,22 @@ def dashboard():
         now=today
     )
 
+    # Store cache safely
+    try:
+        from datetime import datetime
+        _dashboard_cache['timestamp'] = datetime.utcnow()
+        _dashboard_cache['data'] = ctx.copy()
+    except Exception:
+        pass
+
+    t1 = perf_counter()
+    ctx['render_time_ms'] = int((t1 - t0) * 1000)
+    return render_template('dashboard.html', **ctx)
+
 
 @main.route('/members/new', methods=['GET', 'POST'])
 @login_required
+@depot_access_required
 def members_new():
     if request.method == 'POST':
         first_name = request.form.get('first_name', '').strip()
@@ -856,7 +1099,9 @@ def members_new():
             right = ' '.join([postcode, city]).strip()
             address = ', '.join([p for p in [left, right] if p])
         last_payment_raw = request.form.get('last_payment')
-        status = request.form.get('status', 'active')
+        raw_status = (request.form.get('status', 'active') or 'active').strip().lower()
+        status_map = {'actief':'active','inactief':'inactive','gepauzeerd':'paused'}
+        status = status_map.get(raw_status, raw_status if raw_status in {'active','inactive','paused'} else 'active')
 
         last_payment = None
         if last_payment_raw:
@@ -920,6 +1165,7 @@ def members_new():
 
 @main.route('/members/<member_id>/edit', methods=['GET', 'POST'])
 @login_required
+@depot_access_required
 def members_edit(member_id):
     member = Member.query.get_or_404(member_id)
     if request.method == 'POST':
@@ -943,7 +1189,9 @@ def members_edit(member_id):
         else:
             member.address = ''
         last_payment_raw = request.form.get('last_payment')
-        status = request.form.get('status', 'active')
+        raw_status = (request.form.get('status', 'active') or 'active').strip().lower()
+        status_map = {'actief':'active','inactief':'inactive','gepauzeerd':'paused'}
+        status = status_map.get(raw_status, raw_status if raw_status in {'active','inactive','paused'} else 'active')
 
         if last_payment_raw:
             try:
@@ -972,10 +1220,13 @@ def members_edit(member_id):
 
 @main.route('/members/<member_id>/status', methods=['POST'])
 @login_required
+@depot_access_required
 def members_status(member_id):
     member = Member.query.get_or_404(member_id)
-    new_status = request.form.get('status', 'active')
-    member.status = 'active' if new_status == 'active' else 'inactive'
+    raw_status = (request.form.get('status', 'active') or 'active').strip().lower()
+    status_map = {'actief':'active','inactief':'inactive','gepauzeerd':'paused'}
+    new_status = status_map.get(raw_status, raw_status)
+    member.status = new_status if new_status in {'active','inactive','paused'} else 'active'
     db.session.commit()
     return redirect(url_for('main.members_list'))
 
@@ -986,6 +1237,7 @@ def members_status(member_id):
 
 @main.route('/bikes/new', methods=['GET','POST'])
 @login_required
+@depot_access_required
 def bikes_new():
     if request.method == 'POST':
         name = request.form.get('name','').strip()
@@ -1002,6 +1254,7 @@ def bikes_new():
 
 @main.route('/bikes/<bike_id>/edit', methods=['GET','POST'])
 @login_required
+@depot_access_required
 def bikes_edit(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     if request.method == 'POST':
@@ -1017,6 +1270,7 @@ def bikes_edit(bike_id):
 
 @main.route('/bikes/<bike_id>/status', methods=['POST'])
 @login_required
+@depot_access_required
 def bikes_status(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     new_status = request.form.get('status','available')
@@ -1027,6 +1281,7 @@ def bikes_status(bike_id):
 
 @main.route('/bikes/<bike_id>/archive', methods=['POST'])
 @login_required
+@depot_access_required
 def bikes_archive(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     bike.archived = True
@@ -1035,6 +1290,7 @@ def bikes_archive(bike_id):
 
 @main.route('/bikes/<bike_id>/delete', methods=['POST'])
 @login_required
+@depot_access_required
 def bikes_delete(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     # Remove dependent rentals to avoid FK constraint issues
@@ -1051,6 +1307,7 @@ def bikes_delete(bike_id):
 
 @main.route('/rent/<bike_id>', methods=['GET','POST'])
 @login_required
+@depot_access_required
 def rent_bike_action(bike_id):
     bike = Bike.query.get_or_404(bike_id)
     if request.method == 'POST':
@@ -1072,11 +1329,19 @@ def rent_bike_action(bike_id):
 
 @main.route('/items/new', methods=['GET','POST'])
 @login_required
+@depot_access_required
 def items_new():
     if request.method == 'POST':
         name = request.form.get('name','').strip() or 'Object'
         itype = request.form.get('type','').strip().lower() or 'algemeen'
-        status = request.form.get('status','available')
+        raw_status = (request.form.get('status','available') or 'available').strip().lower()
+        status_map = {
+            'beschikbaar': 'available',
+            'onbeschikbaar': 'unavailable',
+            'verhuurd': 'rented',
+            'in herstelling': 'repair'
+        }
+        status = status_map.get(raw_status, raw_status if raw_status in {'available','unavailable','rented','repair'} else 'available')
         item = Item(name=name, type=itype, status=status)
         db.session.add(item)
         db.session.commit()
@@ -1086,35 +1351,52 @@ def items_new():
 # Unified object creation (Bike or generic Item)
 @main.route('/objects/new', methods=['GET','POST'])
 @login_required
+@depot_access_required
 def objects_new():
     if request.method == 'POST':
-        kind = (request.form.get('object_kind') or '').strip().lower()
+        # New flexible form: type_category selects 'fiets' or 'object'
+        type_category = (request.form.get('type_category') or '').strip().lower()
         name = (request.form.get('name') or '').strip() or 'Object'
-        obj_type = (request.form.get('type') or '').strip().lower() or None
-        status = request.form.get('status','available')
-        if kind == 'fiets':
-            # Create Bike
-            btype = obj_type in {'elektrisch','gewoon'} and obj_type or 'gewoon'
-            bike = Bike(name=name, type=btype, status=status)
+        raw_status = (request.form.get('status') or 'available').strip().lower()
+        status_map = {
+            'beschikbaar': 'available',
+            'onbeschikbaar': 'unavailable',
+            'verhuurd': 'rented',
+            'in herstelling': 'repair'
+        }
+        status = status_map.get(raw_status, raw_status if raw_status in {'available','unavailable','rented','repair'} else 'available')
+        if type_category == 'fiets':
+            btype = (request.form.get('bike_specific_type') or 'gewoon').strip().lower()
+            bike = Bike(name=name, type=btype in {'gewoon','elektrisch'} and btype or 'gewoon', status=status or 'available')
             db.session.add(bike)
         else:
-            item = Item(name=name, type=obj_type, status=status)
+            extra_type = (request.form.get('object_extra_type') or '').strip().lower() or None
+            item = Item(name=name, type=extra_type, status=status or 'available')
             db.session.add(item)
         db.session.commit()
+        flash(f"{'Fiets' if type_category == 'fiets' else 'Object'} '{name}' aangemaakt.", 'success')
         return redirect(url_for('main.inventory'))
     return render_template('object_form.html')
 
 @main.route('/items/<item_id>/status', methods=['POST'])
 @login_required
+@depot_access_required
 def items_status(item_id):
     item = Item.query.get_or_404(item_id)
-    new_status = request.form.get('status','available')
-    item.status = new_status
+    raw_status = (request.form.get('status','available') or 'available').strip().lower()
+    status_map = {
+        'beschikbaar': 'available',
+        'onbeschikbaar': 'unavailable',
+        'verhuurd': 'rented',
+        'in herstelling': 'repair'
+    }
+    item.status = status_map.get(raw_status, raw_status if raw_status in {'available','unavailable','rented','repair'} else 'available')
     db.session.commit()
     return redirect(url_for('main.inventory'))
 
 @main.route('/items/<item_id>/delete', methods=['POST'])
 @login_required
+@depot_access_required
 def items_delete(item_id):
     item = Item.query.get_or_404(item_id)
     db.session.delete(item)
@@ -1129,6 +1411,7 @@ def items_delete(item_id):
 
 @main.route('/members/<member_id>/payment', methods=['GET','POST'])
 @login_required
+@finance_access_required
 def members_payment(member_id):
     member = Member.query.get_or_404(member_id)
     if request.method == 'POST':
@@ -1144,6 +1427,7 @@ def members_payment(member_id):
 
 @main.route('/members/<member_id>/delete', methods=['POST'])
 @login_required
+@depot_access_required
 def members_delete(member_id):
     member = Member.query.get_or_404(member_id)
     # Remove dependent rentals and payments first
@@ -1156,6 +1440,7 @@ def members_delete(member_id):
 
 @main.route('/payments')
 @login_required
+@finance_access_required
 def payments_list():
     """Payments overview page with filters"""
     from sqlalchemy import func
@@ -1224,6 +1509,7 @@ def payments_list():
 
 @main.route('/payments/new', methods=['GET', 'POST'])
 @login_required
+@finance_access_required
 def payment_new():
     """New payment form"""
     if request.method == 'POST':
@@ -1260,6 +1546,7 @@ def payment_new():
 
 @main.route('/payments/<payment_id>/toggle-received', methods=['POST'])
 @login_required
+@finance_access_required
 def payment_toggle_received(payment_id):
     """Toggle received status for bank transfer payment"""
     payment = Payment.query.get_or_404(payment_id)
@@ -1278,6 +1565,7 @@ def payment_toggle_received(payment_id):
 
 @main.route('/payments/<payment_id>/delete', methods=['POST'])
 @login_required
+@finance_access_required
 def payment_delete(payment_id):
     """Delete a payment"""
     payment = Payment.query.get_or_404(payment_id)
