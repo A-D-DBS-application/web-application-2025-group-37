@@ -419,7 +419,7 @@ def members_children_assign(member_id, child_id):
 
 @main.route('/rentals')
 @login_required
-@role_required('depot_manager','finance_manager','admin')
+@finance_access_required
 def rentals_list():
     """Rentals overview page with filters"""
     from sqlalchemy import func
