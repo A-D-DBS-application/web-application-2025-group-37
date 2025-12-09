@@ -1,7 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from datetime import datetime, date
 from app.extensions import db
-from app.models import Member, Child, User, Bike, Rental, Payment, Item
+from app.models import (
+    Member, Child, User, Bike, Rental, Payment, Item,
+    MEMBER_STATUSES, BIKE_TYPES, BIKE_STATUSES, ITEM_STATUSES, PAYMENT_METHODS
+)
 from sqlalchemy import text
 from functools import wraps
 
@@ -1160,7 +1163,7 @@ def members_new():
         db.session.commit()
         return redirect(url_for('main.members_list'))
 
-    return render_template('member_form.html', mode='new', member=None)
+    return render_template('member_form.html', mode='new', member=None, member_statuses=MEMBER_STATUSES)
 
 
 @main.route('/members/<member_id>/edit', methods=['GET', 'POST'])
@@ -1215,7 +1218,7 @@ def members_edit(member_id):
         db.session.commit()
         return redirect(url_for('main.members_list'))
 
-    return render_template('member_form.html', mode='edit', member=member)
+    return render_template('member_form.html', mode='edit', member=member, member_statuses=MEMBER_STATUSES)
 
 
 @main.route('/members/<member_id>/status', methods=['POST'])
@@ -1249,7 +1252,7 @@ def bikes_new():
         db.session.add(bike)
         db.session.commit()
         return redirect(url_for('main.inventory'))
-    return render_template('bike_form.html', mode='new', bike=None)
+    return render_template('bike_form.html', mode='new', bike=None, bike_types=BIKE_TYPES, bike_statuses=BIKE_STATUSES)
 
 
 @main.route('/bikes/<bike_id>/edit', methods=['GET','POST'])
@@ -1265,7 +1268,7 @@ def bikes_edit(bike_id):
         bike.status = request.form.get('status','available')
         db.session.commit()
         return redirect(url_for('main.inventory'))
-    return render_template('bike_form.html', mode='edit', bike=bike)
+    return render_template('bike_form.html', mode='edit', bike=bike, bike_types=BIKE_TYPES, bike_statuses=BIKE_STATUSES)
 
 
 @main.route('/bikes/<bike_id>/status', methods=['POST'])
@@ -1346,7 +1349,7 @@ def items_new():
         db.session.add(item)
         db.session.commit()
         return redirect(url_for('main.inventory'))
-    return render_template('item_form.html', mode='new', item=None)
+    return render_template('item_form.html', mode='new', item=None, item_statuses=ITEM_STATUSES)
 
 # Unified object creation (Bike or generic Item)
 @main.route('/objects/new', methods=['GET','POST'])
@@ -1423,7 +1426,7 @@ def members_payment(member_id):
         db.session.add(payment)
         db.session.commit()
         return redirect(url_for('main.members_list'))
-    return render_template('payment_form.html', member=member)
+    return render_template('payment_form.html', member=member, payment_methods=PAYMENT_METHODS)
 
 @main.route('/members/<member_id>/delete', methods=['POST'])
 @login_required

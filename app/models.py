@@ -7,6 +7,15 @@ from werkzeug.security import generate_password_hash, check_password_hash
 def gen_uuid():
     return str(uuid.uuid4())
 
+# Centralized choice lists (avoid hardcoding in templates/routes)
+USER_ROLES = ['depot_manager', 'finance_manager', 'admin']
+MEMBER_STATUSES = ['active', 'inactive']
+BIKE_TYPES = ['gewoon', 'elektrisch']
+BIKE_STATUSES = ['available', 'rented', 'repair']
+RENTAL_STATUSES = ['active', 'returned']
+ITEM_STATUSES = ['available', 'rented', 'repair', 'unavailable']
+PAYMENT_METHODS = ['cash', 'card', 'bank_transfer']
+
 class Employee(db.Model):
     employee_id = db.Column(db.String, primary_key=True, default=gen_uuid)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -33,7 +42,7 @@ class User(db.Model):
     last_name = db.Column(db.String(100))
     email = db.Column(db.String(120))
     password = db.Column(db.String(255))
-    role = db.Column(db.String(50), default='depot_manager')  # depot_manager | finance_manager | admin
+    role = db.Column(db.String(50), default='depot_manager')
     employee_id = db.Column(db.String, db.ForeignKey('employee.employee_id'))
 
     def set_password(self, raw: str):
@@ -71,7 +80,7 @@ class Member(db.Model):
     postcode = db.Column(db.String(20))
     city = db.Column(db.String(120))
     last_payment = db.Column(db.Date)
-    status = db.Column(db.String(20), default='active')  # active | inactive | paused
+    status = db.Column(db.String(20), default='active')
 
     children = db.relationship('Child', backref='member', cascade='all, delete-orphan', lazy=True)
 
@@ -89,7 +98,7 @@ class Bike(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     name = db.Column(db.String(120), nullable=False)
     type = db.Column(db.String(80))
-    status = db.Column(db.String(20), default='available')  # available | rented | repair
+    status = db.Column(db.String(20), default='available')
     archived = db.Column(db.Boolean, default=False)
 
 
@@ -102,11 +111,11 @@ class Rental(db.Model):
     child_id = db.Column(db.String, db.ForeignKey('child.child_id'))
     start_date = db.Column(db.Date, default=date.today)
     end_date = db.Column(db.Date)
-    status = db.Column(db.String(20), default='active')  # active | returned
-    # Relationships for convenient access in templates
-    bike = db.relationship('Bike', lazy='joined')
-    member = db.relationship('Member', lazy='joined')
-    child = db.relationship('Child', lazy='joined')
+    status = db.Column(db.String(20), default='active')
+    # Relationships for convenient access in templates + reverse access via backrefs
+    bike = db.relationship('Bike', backref='rentals', lazy='joined')
+    member = db.relationship('Member', backref='rentals', lazy='joined')
+    child = db.relationship('Child', backref='rentals', lazy='joined')
 
 
 class Payment(db.Model):
@@ -116,10 +125,10 @@ class Payment(db.Model):
     member_id = db.Column(db.String, db.ForeignKey('member.member_id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     paid_at = db.Column(db.Date, default=date.today)
-    method = db.Column(db.String(20), default='cash')  # cash | card | bank_transfer
+    method = db.Column(db.String(20), default='cash')
     received = db.Column(db.Boolean, default=True)  # Voor bankbetalingen: is bedrag ontvangen?
     
-    member = db.relationship('Member', lazy='joined')
+    member = db.relationship('Member', backref='payments', lazy='joined')
 
 class Item(db.Model):
     __tablename__ = 'item'
@@ -127,5 +136,5 @@ class Item(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     name = db.Column(db.String(120), nullable=False)
     type = db.Column(db.String(80))
-    status = db.Column(db.String(20), default='available')  # available | rented | repair | unavailable
+    status = db.Column(db.String(20), default='available')
     archived = db.Column(db.Boolean, default=False)

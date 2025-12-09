@@ -57,6 +57,9 @@
 
 <div class="inventory-table-wrapper card p-4 mb-8">
   <h3 class="text-lg font-semibold mb-4">{{ t('Fietsen') }}</h3>
+  <div class="flex items-center gap-3 mb-3">
+    <input id="bike-filter" type="text" class="border rounded p-2 w-full max-w-md" placeholder="{{ t('Zoek fietsnaam of type…') }}">
+  </div>
   <div class="border rounded bg-white shadow-sm mb-6">
     <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
       <span>{{ t('Beschikbare fietsen') }} ({{ available_bikes|length }})</span>
@@ -73,7 +76,7 @@
       </thead>
       <tbody>
       {% for b in available_bikes %}
-        <tr class="border-t">
+        <tr class="border-t bike-row" data-name="{{ (b.name or '')|lower }}" data-type="{{ (b.type or '')|lower }}" data-status="available">
           <td class="py-2 px-3 font-medium">{{ b.name }}</td>
           <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(b.type or '-') }}{% else %}{{ b.type or '-' }}{% endif %}</td>
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
@@ -108,7 +111,7 @@
       </thead>
       <tbody>
       {% for b in rented_bikes %}
-        <tr class="border-t">
+        <tr class="border-t bike-row" data-name="{{ (b.name or '')|lower }}" data-type="{{ (b.type or '')|lower }}" data-status="rented">
           <td class="py-2 px-3 font-medium">{{ b.name }}</td>
           <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(b.type or '-') }}{% else %}{{ b.type or '-' }}{% endif %}</td>
           <td class="py-2 px-3">
@@ -143,7 +146,7 @@
       </thead>
       <tbody>
       {% for b in repair_bikes %}
-        <tr class="border-t">
+        <tr class="border-t bike-row" data-name="{{ (b.name or '')|lower }}" data-type="{{ (b.type or '')|lower }}" data-status="repair">
           <td class="py-2 px-3 font-medium">{{ b.name }}</td>
           <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(b.type or '-') }}{% else %}{{ b.type or '-' }}{% endif %}</td>
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
@@ -165,6 +168,9 @@
 
 <div class="inventory-table-wrapper card p-4">
   <h3 class="text-lg font-semibold mb-4">{{ t('Objecten') }}</h3>
+  <div class="flex items-center gap-3 mb-3">
+    <input id="item-filter" type="text" class="border rounded p-2 w-full max-w-md" placeholder="{{ t('Zoek objectnaam of type…') }}">
+  </div>
   
 
   <div class="border rounded bg-white shadow-sm mb-6">
@@ -182,7 +188,7 @@
       </thead>
       <tbody>
       {% for i in available_items %}
-        <tr class="border-t">
+        <tr class="border-t item-row" data-name="{{ (i.name or '')|lower }}" data-type="{{ (i.type or '')|lower }}" data-status="available">
           <td class="py-2 px-3 font-medium">{{ i.name }}</td>
           <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(i.type or '-') }}{% else %}{{ i.type or '-' }}{% endif %}</td>
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
@@ -216,7 +222,7 @@
       </thead>
       <tbody>
       {% for i in rented_items %}
-        <tr class="border-t">
+        <tr class="border-t item-row" data-name="{{ (i.name or '')|lower }}" data-type="{{ (i.type or '')|lower }}" data-status="rented">
           <td class="py-2 px-3 font-medium">{{ i.name }}</td>
           <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(i.type or '-') }}{% else %}{{ i.type or '-' }}{% endif %}</td>
           <td class="py-2 px-3">
@@ -253,7 +259,7 @@
       </thead>
       <tbody>
       {% for i in repair_items %}
-        <tr class="border-t">
+        <tr class="border-t item-row" data-name="{{ (i.name or '')|lower }}" data-type="{{ (i.type or '')|lower }}" data-status="repair">
           <td class="py-2 px-3 font-medium">{{ i.name }}</td>
           <td class="py-2 px-3">{{ i.type or '-' }}</td>
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
@@ -272,6 +278,33 @@
     </table>
   </div>
 </div>
+
+<script>
+  const bikeFilter = document.getElementById('bike-filter');
+  if (bikeFilter) {
+    bikeFilter.addEventListener('input', function () {
+      const q = (this.value || '').toLowerCase();
+      document.querySelectorAll('.bike-row').forEach(row => {
+        const name = row.getAttribute('data-name') || '';
+        const type = row.getAttribute('data-type') || '';
+        const match = name.includes(q) || type.includes(q);
+        row.style.display = match ? '' : 'none';
+      });
+    });
+  }
+  const itemFilter = document.getElementById('item-filter');
+  if (itemFilter) {
+    itemFilter.addEventListener('input', function () {
+      const q = (this.value || '').toLowerCase();
+      document.querySelectorAll('.item-row').forEach(row => {
+        const name = row.getAttribute('data-name') || '';
+        const type = row.getAttribute('data-type') || '';
+        const match = name.includes(q) || type.includes(q);
+        row.style.display = match ? '' : 'none';
+      });
+    });
+  }
+</script>
 
 {% endblock %}
 

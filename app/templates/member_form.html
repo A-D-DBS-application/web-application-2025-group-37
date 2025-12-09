@@ -43,9 +43,10 @@
     <div>
       <label class="block mb-1 font-medium">Status</label>
       <select name="status" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200">
-        {% set st = (member.status if member else 'active') %}
-        <option value="active" {{ 'selected' if st=='active' else '' }}>actief</option>
-        <option value="inactive" {{ 'selected' if st=='inactive' else '' }}>inactief</option>
+        {% set st = (member.status if member else (member_statuses[0] if member_statuses else '')) %}
+        {% for s in member_statuses %}
+          <option value="{{ s }}" {{ 'selected' if st==s else '' }}>{{ s=='active' and 'actief' or s=='inactive' and 'inactief' or s }}</option>
+        {% endfor %}
       </select>
     </div>
   </div>
