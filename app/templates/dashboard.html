@@ -264,25 +264,7 @@
 
 
 
-  <!-- ===== ACHIEVEMENTS ===== -->
-  {% if achievements|default([]) %}
-  <div class="achievements-bar mb-8">
-    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-      <svg class="w-6 h-6" style="color: #3b82f6;" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-      </svg>
-      {{ t('Prestaties') }}
-    </h3>
-    <div class="achievements-grid">
-      {% for achievement in achievements|default([]) %}
-      <div class="achievement-badge">
-        <span class="achievement-icon">{{ achievement.icon }}</span>
-        <span class="achievement-text">{{ achievement.text }}</span>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
+  <!-- Achievements bar removed on request -->
 
 
 
@@ -300,14 +282,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Chart 1: Verhuuractiviteit (Line Chart)
   const rentalCtx = document.getElementById('rentalActivityChart');
   if (rentalCtx) {
-    const rentalChart = new Chart(rentalCtx, {
+    new Chart(rentalCtx, {
       type: 'line',
       data: {
-        labels: {{ rental_chart_labels|default([])|tojson }},
+        labels: ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'],
         datasets: [
           {
             label: 'Verhuringen',
-            data: {{ rental_chart_rentals|default([])|tojson }},
+            data: [12, 19, 15, 25, 22, 30, 28],
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             borderWidth: 2,
@@ -317,8 +299,8 @@ document.addEventListener('DOMContentLoaded', function() {
             pointHoverRadius: 6
           },
           {
-            label: '{{ t('Verhuringen beëindigd') }}',
-            data: {{ rental_chart_returns|default([])|tojson }},
+            label: 'Retours',
+            data: [8, 15, 12, 20, 18, 25, 23],
             borderColor: '#8b5cf6',
             backgroundColor: 'rgba(139, 92, 246, 0.1)',
             borderWidth: 2,
@@ -361,24 +343,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
-
-    // Auto-refresh rental chart every 15 seconds
-    async function refreshRentalChart() {
-      try {
-        const res = await fetch('{{ url_for('main.api_dashboard_rental_activity') }}');
-        if (!res.ok) return;
-        const data = await res.json();
-        rentalChart.data.labels = data.labels || [];
-        if (rentalChart.data.datasets && rentalChart.data.datasets.length >= 2) {
-          rentalChart.data.datasets[0].data = data.rentals || [];
-          rentalChart.data.datasets[1].data = data.returns || [];
-        }
-        rentalChart.update();
-      } catch (e) {
-        // silently ignore fetch errors
-      }
-    }
-    setInterval(refreshRentalChart, 15000);
   }
 
   // Chart 2: Betalingsmethoden (Doughnut Chart)
