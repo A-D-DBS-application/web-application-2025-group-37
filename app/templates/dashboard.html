@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Chart 1: Verhuuractiviteit (Line Chart)
   const rentalCtx = document.getElementById('rentalActivityChart');
   if (rentalCtx) {
-    new Chart(rentalCtx, {
+    const rentalChart = new Chart(rentalCtx, {
       type: 'line',
       data: {
         labels: {{ rental_chart_labels|default([])|tojson }},
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pointHoverRadius: 6
           },
           {
-            label: 'Retours',
+            label: '{{ t('Verhuringen beëindigd') }}',
             data: {{ rental_chart_returns|default([])|tojson }},
             borderColor: '#8b5cf6',
             backgroundColor: 'rgba(139, 92, 246, 0.1)',
@@ -361,6 +361,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
+
+    // Auto-refresh rental chart every 15 seconds
+    async function refreshRentalChart() {
+      try {
+        const res = await fetch('{{ url_for('main.api_dashboard_rental_activity') }}');
+        if (!res.ok) return;
+        const data = await res.json();
+        rentalChart.data.labels = data.labels || [];
+        if (rentalChart.data.datasets && rentalChart.data.datasets.length >= 2) {
+          rentalChart.data.datasets[0].data = data.rentals || [];
+          rentalChart.data.datasets[1].data = data.returns || [];
+        }
+        rentalChart.update();
+      } catch (e) {
+        // silently ignore fetch errors
+      }
+    }
+    setInterval(refreshRentalChart, 15000);
   }
 
   // Chart 2: Betalingsmethoden (Doughnut Chart)

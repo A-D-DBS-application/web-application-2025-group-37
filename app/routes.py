@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from datetime import datetime, date
 from app.extensions import db
 from app.models import (
@@ -545,6 +545,62 @@ def rental_new():
     # Children list can be filtered client-side when a member is selected; provide all with member mapping
     children = Child.query.all()
     return render_template('rent_new.html', members=members, available_bikes=available_bikes, children=children, today=date.today().strftime('%Y-%m-%d'))
+
+
+# End an active rental: set end_date=today and status='returned', free the bike
+@main.route('/rentals/<rental_id>/end', methods=['POST'])
+@login_required
+@role_required('depot_manager', 'finance_manager', 'admin')
+def rentals_end(rental_id):
+    r = Rental.query.get_or_404(rental_id)
+    if r.status == 'returned':
+        flash('Verhuring is al beëindigd.', 'info')
+        return redirect(url_for('main.rentals_list'))
+    r.end_date = date.today()
+    r.status = 'returned'
+    # Free the bike when rental ends
+    try:
+        if r.bike:
+            r.bike.status = 'available'
+    except Exception:
+        pass
+    db.session.commit()
+    # Invalidate dashboard cache so charts reflect latest changes
+    try:
+        _dashboard_cache['timestamp'] = None
+        _dashboard_cache['data'] = None
+    except Exception:
+        pass
+    flash('Verhuring beëindigd.', 'success')
+    return redirect(url_for('main.rentals_list'))
+
+
+# -----------------------
+# Dashboard JSON APIs (for auto-refresh)
+# -----------------------
+
+@main.route('/api/dashboard/rental-activity')
+@login_required
+def api_dashboard_rental_activity():
+    from datetime import timedelta
+    today = date.today()
+    labels = []
+    rentals = []
+    returns = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        labels.append(day.strftime('%d/%m'))
+        rentals.append(
+            db.session.query(Rental).filter(Rental.start_date == day).count()
+        )
+        returns.append(
+            db.session.query(Rental).filter(Rental.end_date == day, Rental.status == 'returned').count()
+        )
+    return jsonify({
+        'labels': labels,
+        'rentals': rentals,
+        'returns': returns
+    })
 
 
 # Simple in-memory cache for dashboard data to reduce load
