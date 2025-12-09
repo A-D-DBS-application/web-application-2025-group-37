@@ -303,11 +303,11 @@ document.addEventListener('DOMContentLoaded', function() {
     new Chart(rentalCtx, {
       type: 'line',
       data: {
-        labels: ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'],
+        labels: {{ rental_chart_labels|default([])|tojson }},
         datasets: [
           {
             label: 'Verhuringen',
-            data: [12, 19, 15, 25, 22, 30, 28],
+            data: {{ rental_chart_rentals|default([])|tojson }},
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             borderWidth: 2,
@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
           },
           {
             label: 'Retours',
-            data: [8, 15, 12, 20, 18, 25, 23],
+            data: {{ rental_chart_returns|default([])|tojson }},
             borderColor: '#8b5cf6',
             backgroundColor: 'rgba(139, 92, 246, 0.1)',
             borderWidth: 2,

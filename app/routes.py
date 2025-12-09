@@ -692,14 +692,16 @@ def dashboard():
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         rental_chart_labels.append(day.strftime('%d/%m'))
-        
-        # Rentals started on this day
-        rentals_count = Rental.query.filter(func.date(Rental.created_at) == day).count()
+
+        # Rentals started on this day (use start_date for accuracy)
+        rentals_count = Rental.query.filter(
+            Rental.start_date == day
+        ).count()
         rental_chart_rentals.append(rentals_count)
-        
-        # Returns on this day (rentals with end_date = day and status returned)
+
+        # Returns on this day (end_date = day and status returned)
         returns_count = Rental.query.filter(
-            func.date(Rental.end_date) == day,
+            Rental.end_date == day,
             Rental.status == 'returned'
         ).count()
         rental_chart_returns.append(returns_count)
