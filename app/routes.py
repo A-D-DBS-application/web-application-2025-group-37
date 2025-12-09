@@ -593,8 +593,10 @@ def api_dashboard_rental_activity():
         rentals.append(
             db.session.query(Rental).filter(Rental.start_date == day).count()
         )
+        # Use func.date for robust date matching across drivers
+        from sqlalchemy import func
         returns.append(
-            db.session.query(Rental).filter(Rental.end_date == day, Rental.status == 'returned').count()
+            db.session.query(Rental).filter(func.date(Rental.end_date) == day, Rental.status == 'returned').count()
         )
     return jsonify({
         'labels': labels,
@@ -756,8 +758,9 @@ def dashboard():
         rental_chart_rentals.append(rentals_count)
 
         # Returns on this day (end_date = day and status returned)
+        from sqlalchemy import func
         returns_count = Rental.query.filter(
-            Rental.end_date == day,
+            func.date(Rental.end_date) == day,
             Rental.status == 'returned'
         ).count()
         rental_chart_returns.append(returns_count)
