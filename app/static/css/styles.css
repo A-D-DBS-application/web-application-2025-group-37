@@ -798,6 +798,32 @@ a:hover {
   border-top: 1px solid #f3f4f6;
 }
 
+/* ========== Global Table Alignment & Borders ========== */
+/* Apply consistent layout and border behavior to all full-width tables */
+table.w-full {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse; /* ensure borders align and do not bleed */
+}
+
+table.w-full thead th {
+  border-bottom: 1px solid var(--border-color);
+}
+
+table.w-full tbody td {
+  border-bottom: 1px solid var(--border-color);
+}
+
+table.w-full tbody tr:last-child td {
+  border-bottom: 0; /* stop lines at end of table */
+}
+
+/* Ensure common bordered containers clip inner table lines to rounded corners */
+.border.rounded { overflow: hidden; }
+.border.rounded-lg { overflow: hidden; }
+.border.rounded-xl { overflow: hidden; }
+.card.table-card { overflow: hidden; }
+
 .metric-sub-item {
   display: flex;
   flex-direction: column;

@@ -36,6 +36,7 @@
       <label class="block mb-1 font-medium">Stad</label>
       <input name="city" type="text" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.city if member else '' }}">
     </div>
+    {% if mode != 'new' %}
     <div>
       <label class="block mb-1 font-medium">Laatste betaling</label>
       <input name="last_payment" type="date" class="border w-full rounded p-2 focus:outline-none focus:ring-2 focus:ring-green-200" value="{{ member.last_payment.strftime('%Y-%m-%d') if member and member.last_payment else '' }}">
@@ -49,6 +50,7 @@
         {% endfor %}
       </select>
     </div>
+    {% endif %}
   </div>
 
   <div class="pt-4 border-t">

@@ -87,7 +87,7 @@
                 <input type="hidden" name="status" value="repair" />
                 <button class="btn btn-sm" aria-label="{{ t('In herstelling') }}" title="{{ t('In herstelling') }}">{{ t('In herstelling') }}</button>
               </form>
-              <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirm('Fiets verwijderen?');">
+              <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirmDeleteBike('{{ b.name|e }}', '{{ (b.status or '')|lower }}');">
                 <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
                 </button>
@@ -123,7 +123,7 @@
             <span class="text-xs">{{ renter or '-' }}</span>
           </td>
           <td class="py-2 px-3 text-right">
-            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirm('Fiets verwijderen?');">
+            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirmDeleteBike('{{ b.name|e }}', '{{ (b.status or '')|lower }}');">
               <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
@@ -159,7 +159,7 @@
               <input type="hidden" name="status" value="available" />
               <button class="btn btn-sm" aria-label="{{ t('Gerepareerd') }}" title="{{ t('Gerepareerd') }}">{{ t('Gerepareerd') }}</button>
             </form>
-            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirm('Fiets verwijderen?');">
+            <form method="POST" action="{{ url_for('main.bikes_delete', bike_id=b.bike_id) }}" class="inline-block" onsubmit="return confirmDeleteBike('{{ b.name|e }}', '{{ (b.status or '')|lower }}');">
               <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
@@ -201,7 +201,7 @@
           <td class="py-2 px-3">{% if current_lang == 'fr' %}{{ type_fr(i.type or '-') }}{% else %}{{ i.type or '-' }}{% endif %}</td>
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
           <td class="py-2 px-3 text-right">
-            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirm(t('Object verwijderen?'));">
+            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirmDeleteItem('{{ i.name|e }}', '{{ (i.status or '')|lower }}');">
               <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
@@ -238,7 +238,7 @@
             <span class="text-xs">{{ renter or '-' }}</span>
           </td>
           <td class="py-2 px-3 text-right">
-            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirm(t('Object verwijderen?'));">
+            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirmDeleteItem('{{ i.name|e }}', '{{ (i.status or '')|lower }}');">
               <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
@@ -272,7 +272,7 @@
           <td class="py-2 px-3">{{ i.type or '-' }}</td>
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
           <td class="py-2 px-3 text-right">
-            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirm(t('Object verwijderen?'));">
+            <form method="POST" action="{{ url_for('main.items_delete', item_id=i.item_id) }}" class="inline-block" onsubmit="return confirmDeleteItem('{{ i.name|e }}', '{{ (i.status or '')|lower }}');">
               <button class="icon-btn" aria-label="{{ t('Verwijderen') }}" title="{{ t('Verwijderen') }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
               </button>
@@ -288,6 +288,19 @@
 </div>
 
 <script>
+  function confirmDeleteBike(name, status) {
+    const base = `${name ? name + ' – ' : ''}{{ t('Weet je zeker dat je deze fiets wilt verwijderen?') }}`;
+    const impact = `\n\n{{ t('Let op: Dit is definitief.') }}` +
+      (status === 'rented' ? `\n{{ t('Deze fiets is momenteel verhuurd; bij verwijderen gaan bijhorende verhuringen verloren.') }}` : `\n{{ t('Eventuele bijhorende verhuringen worden ook verwijderd.') }}`);
+    if (!confirm(base + impact)) return false;
+    return confirm('{{ t('Bevestig verwijdering aub.') }}');
+  }
+  function confirmDeleteItem(name, status) {
+    const base = `${name ? name + ' – ' : ''}{{ t('Weet je zeker dat je dit object wilt verwijderen?') }}`;
+    const impact = `\n\n{{ t('Let op: Dit is definitief en kan niet ongedaan worden.') }}`;
+    if (!confirm(base + impact)) return false;
+    return confirm('{{ t('Bevestig verwijdering aub.') }}');
+  }
   const bikeFilter = document.getElementById('bike-filter');
   if (bikeFilter) {
     bikeFilter.addEventListener('input', function () {

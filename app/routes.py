@@ -8,7 +8,90 @@ from app.models import (
 from sqlalchemy import text
 from functools import wraps
 
+# Guard: helper to check if a child already has an active rental
+def _child_has_active_rental(child_id: str) -> bool:
+    if not child_id:
+        return False
+    try:
+        existing = Rental.query.filter(
+            Rental.child_id == child_id,
+            Rental.status == 'active'
+        ).first()
+        return existing is not None
+    except Exception:
+        return False
+
 main = Blueprint('main', __name__)
+
+# Helper: unified members list matching "Leden" tab logic
+def get_display_members():
+    all_members = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
+    combined = list(all_members)
+    try:
+        from types import SimpleNamespace
+        with db.engine.begin() as conn:
+            for table_name in ['public."Members"', 'public."Member"']:
+                try:
+                    rows = conn.execute(text(f'SELECT member_id, first_name, last_name, email, phone, address, last_payment, status FROM {table_name} ORDER BY last_name, first_name')).mappings().all()
+                    for r in rows:
+                        combined.append(SimpleNamespace(
+                            member_id=r.get('member_id'),
+                            first_name=r.get('first_name'),
+                            last_name=r.get('last_name'),
+                            email=r.get('email'),
+                            phone=r.get('phone'),
+                            address=r.get('address'),
+                            last_payment=r.get('last_payment'),
+                            status=r.get('status'),
+                            children=[]
+                        ))
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    # De-duplicate by (member_id or email+phone)
+    seen_ids = set()
+    seen_keys = set()
+    unique_members = []
+    for m in combined:
+        mid = getattr(m, 'member_id', None)
+        key = ((getattr(m, 'email', '') or '').lower(), (getattr(m, 'phone', '') or '').strip())
+        if mid and mid in seen_ids:
+            continue
+        if key in seen_keys:
+            continue
+        if mid:
+            seen_ids.add(mid)
+        seen_keys.add(key)
+        unique_members.append(m)
+    return unique_members
+
+# Helper: automatically expire rentals whose end date has passed
+def _expire_past_due_rentals():
+    """Set status='returned' for rentals with end_date < today and free bikes.
+
+    Best-effort: runs quickly and ignores individual failures so pages stay responsive.
+    """
+    try:
+        today = date.today()
+        overdue = db.session.query(Rental).filter(
+            Rental.status == 'active',
+            Rental.end_date != None,
+            Rental.end_date < today
+        ).all()
+        if not overdue:
+            return
+        for r in overdue:
+            r.status = 'returned'
+            try:
+                if r.bike:
+                    r.bike.status = 'available'
+            except Exception:
+                pass
+        db.session.commit()
+    except Exception:
+        # Non-blocking: any error here should not impact page rendering
+        pass
 
 # ============================================
 # Security Decorators - Rolgebaseerde toegangscontrole
@@ -84,6 +167,8 @@ def home():
 @login_required
 @depot_access_required
 def inventory():
+    # Auto-expire any rentals that have passed their end date so bike status is accurate
+    _expire_past_due_rentals()
     # Bikes
     bikes_all = Bike.query.filter_by(archived=False).order_by(Bike.created_at.desc()).all()
     available_bikes = [b for b in bikes_all if (b.status or '').lower() == 'available']
@@ -125,7 +210,8 @@ def inventory():
     # Simple repair stats for insights card
     repair_stats = {
         'total_in_repair': len(repair_bikes),
-        'avg_repair_time': 0,
+        # Not available: no timestamps tracked for repair durations
+        'avg_repair_time': None,
         'bikes': repair_bikes
     }
 
@@ -285,6 +371,8 @@ def login():
             session['user_role'] = user.role
             session['user_name'] = f"{user.first_name} {user.last_name}"
             session['user_email'] = user.email
+            # Toon upcoming rentals popup slechts eenmalig na login
+            session['show_upcoming_popup'] = True
             
             flash(f'Welkom, {user.first_name}!', 'success')
             
@@ -310,46 +398,7 @@ def logout():
 @depot_access_required
 def members_list():
     # Build a combined view: ORM + optional public tables (if present)
-    all_members = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
-    combined = list(all_members)
-    try:
-        from types import SimpleNamespace
-        with db.engine.begin() as conn:
-            for table_name in ['public."Members"', 'public."Member"']:
-                try:
-                    rows = conn.execute(text(f'SELECT member_id, first_name, last_name, email, phone, address, last_payment, status FROM {table_name} ORDER BY last_name, first_name')).mappings().all()
-                    for r in rows:
-                        combined.append(SimpleNamespace(
-                            member_id=r.get('member_id'),
-                            first_name=r.get('first_name'),
-                            last_name=r.get('last_name'),
-                            email=r.get('email'),
-                            phone=r.get('phone'),
-                            address=r.get('address'),
-                            last_payment=r.get('last_payment'),
-                            status=r.get('status'),
-                            children=[]
-                        ))
-                except Exception:
-                    continue
-    except Exception:
-        pass
-    # De-duplicate by (member_id or email+phone)
-    seen_ids = set()
-    seen_keys = set()
-    unique_members = []
-    for m in combined:
-        mid = getattr(m, 'member_id', None)
-        key = (getattr(m, 'email', '') or '').lower(), (getattr(m, 'phone', '') or '').strip()
-        if mid and mid in seen_ids:
-            continue
-        if key in seen_keys:
-            continue
-        if mid:
-            seen_ids.add(mid)
-        seen_keys.add(key)
-        unique_members.append(m)
-    all_members = unique_members
+    all_members = get_display_members()
     # Normalize statuses (nl -> en) for grouping
     def norm_status(s):
         s = (s or '').strip().lower()
@@ -372,7 +421,24 @@ def members_list():
     if not active_members and not inactive_members and all_members:
         active_members = all_members
 
-    return render_template('members.html', active_members=active_members, inactive_members=inactive_members, today=date.today())
+    # Build set of members that have active rentals (direct or via child)
+    blocked_member_ids = set()
+    try:
+        # Direct rentals
+        for mid, in db.session.query(Rental.member_id).filter(Rental.status == 'active', Rental.member_id.isnot(None)).all():
+            blocked_member_ids.add(mid)
+        # Via children
+        rows = db.session.query(Child.member_id).join(Rental, Rental.child_id == Child.child_id).filter(Rental.status == 'active').all()
+        for mid, in rows:
+            blocked_member_ids.add(mid)
+    except Exception:
+        pass
+    # Alphabetical sort by first name for unified view
+    try:
+        members_sorted = sorted(all_members, key=lambda m: (getattr(m, 'first_name', '') or '').lower())
+    except Exception:
+        members_sorted = all_members
+    return render_template('members.html', active_members=active_members, inactive_members=inactive_members, members_sorted=members_sorted, today=date.today(), blocked_member_ids=blocked_member_ids)
 
 
 @main.route('/members/<member_id>/children', methods=['GET'])
@@ -413,6 +479,10 @@ def members_children_assign(member_id, child_id):
     if bike.archived or bike.status != 'available':
         flash('Fiets niet beschikbaar', 'error')
         return redirect(url_for('main.members_children', member_id=member.member_id))
+    # Prevent multiple active rentals for the same child
+    if _child_has_active_rental(child.child_id):
+        flash('Dit kind heeft al een actieve verhuring.', 'error')
+        return redirect(url_for('main.members_children', member_id=member.member_id))
     rental = Rental(bike_id=bike.bike_id, member_id=member.member_id, child_id=child.child_id)
     db.session.add(rental)
     bike.status = 'rented'
@@ -427,6 +497,8 @@ def rentals_list():
     """Rentals overview page with filters"""
     from sqlalchemy import func
     from datetime import timedelta
+    # Ensure any past-due rentals are marked returned before listing
+    _expire_past_due_rentals()
     
     # Calculate date for overdue payments (30 days ago)
     thirty_days_ago = date.today() - timedelta(days=30)
@@ -467,7 +539,14 @@ def rentals_list():
         )
     
     # Get results
-    rentals_data = query.order_by(Rental.start_date.desc()).all()
+    # Order: Actief first, then Beëindigd, each by start_date desc
+    from sqlalchemy import case
+    status_order = case(
+        (Rental.status == 'active', 0),
+        (Rental.status == 'returned', 1),
+        else_=2
+    )
+    rentals_data = query.order_by(status_order, Rental.start_date.desc()).all()
     
     # Calculate stats - simple counts
     total_active = db.session.query(func.count(Rental.rental_id))\
@@ -515,7 +594,9 @@ def rental_new():
         bike_id = request.form.get('bike_id')
         child_id = request.form.get('child_id') or None
         start_date_raw = request.form.get('start_date')
-        end_date_raw = request.form.get('end_date')
+        payment_method = (request.form.get('payment_method') or '').strip()
+        amount_raw = request.form.get('amount')
+        received_flag = request.form.get('received') == 'true'
         # Safe parse ISO dates (yyyy-mm-dd); fallback to today/None
         start_date = None
         end_date = None
@@ -523,8 +604,10 @@ def rental_new():
             start_date = date.fromisoformat(start_date_raw) if start_date_raw else date.today()
         except Exception:
             start_date = date.today()
+        # Automatically set end_date to one year after start_date
         try:
-            end_date = date.fromisoformat(end_date_raw) if end_date_raw else None
+            from datetime import timedelta
+            end_date = start_date + timedelta(days=365)
         except Exception:
             end_date = None
 
@@ -532,15 +615,55 @@ def rental_new():
         if bike.archived or (bike.status or '').lower() != 'available':
             flash('Geselecteerde fiets is niet beschikbaar.', 'error')
             return redirect(url_for('main.rental_new'))
+        # Prevent multiple active rentals for the same child when child_id provided
+        if child_id and _child_has_active_rental(child_id):
+                flash('Dit kind heeft al een actieve verhuring.', 'error')
+                return redirect(url_for('main.rental_new'))
 
         rental = Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id, start_date=start_date, end_date=end_date)
         db.session.add(rental)
         bike.status = 'rented'
+        # Final guard before commit: if this would create >1 active rentals for the child, abort
+        if child_id and _child_has_active_rental(child_id):
+            # Count including the pending new rental
+            from sqlalchemy import func
+            cnt = db.session.query(func.count(Rental.rental_id)).filter(Rental.child_id == child_id, Rental.status == 'active').scalar() or 0
+            if cnt >= 2:
+                db.session.rollback()
+                try:
+                    bike.status = 'available'
+                    db.session.commit()
+                except Exception:
+                    pass
+                flash('Dit kind heeft al een actieve verhuring. Nieuwe verhuring is geweigerd.', 'error')
+                return redirect(url_for('main.rental_new'))
+        # Create payment immediately
+        try:
+            amt = float(amount_raw or 0)
+        except Exception:
+            amt = 0.0
+        # Determine received: cash/card are always received; bank depends on checkbox
+        if payment_method in ['cash', 'card']:
+            received = True
+        else:
+            received = bool(received_flag)
+        payment = Payment(
+            member_id=member_id,
+            amount=amt,
+            method=payment_method if payment_method in ['cash','card','bank_transfer'] else 'cash',
+            paid_at=start_date,
+            received=received
+        )
+        db.session.add(payment)
+        # Update member's last_payment
+        member = Member.query.get(member_id)
+        if member:
+            member.last_payment = payment.paid_at
         db.session.commit()
         flash('Verhuring aangemaakt.', 'success')
         return redirect(url_for('main.rentals_list'))
 
-    members = Member.query.order_by(Member.last_name.asc(), Member.first_name.asc()).all()
+    members = get_display_members()
     available_bikes = Bike.query.filter_by(status='available', archived=False).order_by(Bike.created_at.desc()).all()
     # Children list can be filtered client-side when a member is selected; provide all with member mapping
     children = Child.query.all()
@@ -575,6 +698,52 @@ def rentals_end(rental_id):
     return redirect(url_for('main.rentals_list'))
 
 
+# Cancel/annuleer een verhuring: record verwijderen en fiets vrijgeven
+@main.route('/rentals/<rental_id>/cancel', methods=['POST'])
+@login_required
+@role_required('depot_manager', 'finance_manager', 'admin')
+def rentals_cancel(rental_id):
+    r = Rental.query.get_or_404(rental_id)
+    # Free the bike regardless of rental status
+    try:
+        if r.bike:
+            r.bike.status = 'available'
+    except Exception:
+        pass
+    # Delete the rental so it disappears from overview
+    db.session.delete(r)
+    db.session.commit()
+    # Invalidate dashboard cache
+    try:
+        _dashboard_cache['timestamp'] = None
+        _dashboard_cache['data'] = None
+    except Exception:
+        pass
+    flash('Verhuring geannuleerd en verwijderd. Fiets is terug beschikbaar.', 'success')
+    return redirect(url_for('main.rentals_list'))
+
+
+# Verwijder een beëindigde verhuring (alleen status 'returned')
+@main.route('/rentals/<rental_id>/delete-returned', methods=['POST'])
+@login_required
+@role_required('depot_manager', 'finance_manager', 'admin')
+def rentals_delete_returned(rental_id):
+    r = Rental.query.get_or_404(rental_id)
+    if r.status != 'returned':
+        flash('Alleen beëindigde verhuringen kunnen verwijderd worden.', 'error')
+        return redirect(url_for('main.rentals_list'))
+    # Delete without changing bike status (already handled on end)
+    db.session.delete(r)
+    db.session.commit()
+    try:
+        _dashboard_cache['timestamp'] = None
+        _dashboard_cache['data'] = None
+    except Exception:
+        pass
+    flash('Beëindigde verhuring verwijderd.', 'info')
+    return redirect(url_for('main.rentals_list'))
+
+
 # -----------------------
 # Dashboard JSON APIs (for auto-refresh)
 # -----------------------
@@ -586,23 +755,64 @@ def api_dashboard_rental_activity():
     today = date.today()
     labels = []
     rentals = []
-    returns = []
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         labels.append(day.strftime('%d/%m'))
-        rentals.append(
-            db.session.query(Rental).filter(Rental.start_date == day).count()
-        )
-        # Use func.date for robust date matching across drivers
+        # Use func.date to ensure correct matching even if the column is a DateTime
         from sqlalchemy import func
-        returns.append(
-            db.session.query(Rental).filter(func.date(Rental.end_date) == day, Rental.status == 'returned').count()
+        rentals.append(
+            db.session.query(Rental)
+            .filter(func.date(Rental.start_date) == day)
+            .count()
         )
     return jsonify({
         'labels': labels,
-        'rentals': rentals,
-        'returns': returns
+        'rentals': rentals
     })
+
+@main.route('/api/dashboard/upcoming-rentals')
+@login_required
+def api_dashboard_upcoming_rentals():
+    try:
+        from app.speciaal_algoritme import get_upcoming_rentals_for_popup
+        payload = get_upcoming_rentals_for_popup(days_threshold=30)
+        # Serialize dates to isoformat
+        for it in payload.get('items', []):
+            d = it.get('end_date')
+            if d:
+                it['end_date'] = d.strftime('%Y-%m-%d')
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({'error': str(e), 'items': [], 'count': 0}), 200
+
+@main.route('/api/dashboard/upcoming-rentals/ack', methods=['POST'])
+@login_required
+def api_dashboard_upcoming_rentals_ack():
+    # Mark popup as shown for this session so it won't reappear
+    try:
+        session['show_upcoming_popup'] = False
+    except Exception:
+        pass
+    return jsonify({'ok': True})
+
+# ---- Child active rental status API ----
+@main.route('/api/child/<child_id>/has-active-rental')
+@login_required
+def api_child_has_active_rental(child_id):
+    try:
+        has = _child_has_active_rental(child_id)
+        # optional: include current bike name for context
+        bike_name = None
+        if has:
+            r = Rental.query.filter(
+                Rental.child_id == child_id,
+                Rental.status == 'active'
+            ).first()
+            if r and r.bike:
+                bike_name = r.bike.name
+        return jsonify({'hasActiveRental': bool(has), 'bikeName': bike_name})
+    except Exception as e:
+        return jsonify({'hasActiveRental': False, 'error': str(e)})
 
 
 # Simple in-memory cache for dashboard data to reduce load
@@ -616,6 +826,8 @@ _dashboard_cache = {
 def dashboard():
     from time import perf_counter
     t0 = perf_counter()
+    # Keep figures accurate: auto-expire rentals past end_date
+    _expire_past_due_rentals()
     # Serve cached data for up to 30 seconds to avoid heavy recomputation
     try:
         from datetime import datetime, timedelta
@@ -699,20 +911,20 @@ def dashboard():
         func.date(Payment.paid_at) == today
     ).count()
     
-    # Payment method breakdown this month
+    # Payment method breakdown (all time, only received amounts)
     cash_payments = db.session.query(func.sum(Payment.amount)).filter(
-        func.date(Payment.paid_at) >= month_start,
-        Payment.method == 'cash'
+        Payment.method == 'cash',
+        Payment.received == True
     ).scalar() or 0
     
     card_payments = db.session.query(func.sum(Payment.amount)).filter(
-        func.date(Payment.paid_at) >= month_start,
-        Payment.method == 'card'
+        Payment.method == 'card',
+        Payment.received == True
     ).scalar() or 0
     
     bank_payments = db.session.query(func.sum(Payment.amount)).filter(
-        func.date(Payment.paid_at) >= month_start,
-        Payment.method == 'bank_transfer'
+        Payment.method == 'bank_transfer',
+        Payment.received == True
     ).scalar() or 0
     
     # Outstanding amount (mock - would need better tracking)
@@ -740,8 +952,8 @@ def dashboard():
     
     # === CARD 4: Reparaties ===
     bikes_in_repair = repair_bikes_count
-    # Average repair time (mock for now - would need repair history)
-    avg_repair_days = 7  # placeholder
+    # Average repair time not computable with current schema (no repair timestamps)
+    avg_repair_days = None
     
     # === CHART DATA: Rental activity (last 7 days) ===
     rental_chart_labels = []
@@ -978,7 +1190,7 @@ def dashboard():
     # === REPAIR INSIGHTS ===
     repair_stats = {
         'total_in_repair': repair_bikes_count,
-        'avg_repair_time': 7,  # placeholder
+        'avg_repair_time': None,
         'bikes': Bike.query.filter_by(status='repair', archived=False).limit(5).all()
     }
     
@@ -1084,9 +1296,9 @@ def dashboard():
         payments_count_this_month=payments_count_this_month,
         payments_today=payments_today,
         payments_count_today=payments_count_today,
-        cash_payments=cash_payments,
-        card_payments=card_payments,
-        bank_payments=bank_payments,
+        cash_payments=float(cash_payments),
+        card_payments=float(card_payments),
+        bank_payments=float(bank_payments),
         overdue_members=overdue_members_count,
         overdue_amount=overdue_amount,
         last_payment=last_payment,
@@ -1361,7 +1573,7 @@ def bikes_delete(bike_id):
     Rental.query.filter_by(bike_id=bike.bike_id).delete(synchronize_session=False)
     db.session.delete(bike)
     db.session.commit()
-    flash('Fiets verwijderd', 'info')
+    flash('Fiets verwijderd. Let op: bijhorende verhuringen zijn ook verwijderd.', 'warning')
     return redirect(url_for('main.inventory'))
 
 
@@ -1378,13 +1590,61 @@ def rent_bike_action(bike_id):
         member_id = request.form.get('member_id')
         child_id = request.form.get('child_id') or None
         start_date_raw = request.form.get('start_date')
+        payment_method = (request.form.get('payment_method') or '').strip()
+        amount_raw = request.form.get('amount')
+        received_flag = request.form.get('received') == 'true'
+        # Only allow renting available bikes
+        if bike.archived or (bike.status or '').lower() != 'available':
+            flash('Geselecteerde fiets is niet beschikbaar.', 'error')
+            return redirect(url_for('main.rent_bike_action', bike_id=bike.bike_id))
+        # Prevent multiple active rentals for the same child
+        if child_id and _child_has_active_rental(child_id):
+                flash('Dit kind heeft al een actieve verhuring.', 'error')
+                return redirect(url_for('main.rent_bike_action', bike_id=bike.bike_id))
         start = date.fromisoformat(start_date_raw) if start_date_raw else date.today()
-        rental = Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id, start_date=start)
+        # End date is fixed: one year after start date
+        from datetime import timedelta
+        end = start + timedelta(days=365)
+        rental = Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id, start_date=start, end_date=end)
         db.session.add(rental)
         bike.status = 'rented'
+        # Final guard before commit: ensure we do not end up with multiple active rentals for the child
+        if child_id and _child_has_active_rental(child_id):
+            from sqlalchemy import func
+            cnt = db.session.query(func.count(Rental.rental_id)).filter(Rental.child_id == child_id, Rental.status == 'active').scalar() or 0
+            if cnt >= 2:
+                db.session.rollback()
+                try:
+                    bike.status = 'available'
+                    db.session.commit()
+                except Exception:
+                    pass
+                flash('Dit kind heeft al een actieve verhuring. Nieuwe verhuring is geweigerd.', 'error')
+                return redirect(url_for('main.rent_bike_action', bike_id=bike.bike_id))
+        # Create payment immediately
+        try:
+            amt = float(amount_raw or 0)
+        except Exception:
+            amt = 0.0
+        if payment_method in ['cash', 'card']:
+            received = True
+        else:
+            received = bool(received_flag)
+        payment = Payment(
+            member_id=member_id,
+            amount=amt,
+            method=payment_method if payment_method in ['cash','card','bank_transfer'] else 'cash',
+            paid_at=start,
+            received=received
+        )
+        db.session.add(payment)
+        # Update member's last_payment
+        member = Member.query.get(member_id)
+        if member:
+            member.last_payment = payment.paid_at
         db.session.commit()
         return redirect(url_for('main.inventory'))
-    members = Member.query.order_by(Member.last_name).all()
+    members = get_display_members()
     return render_template('rent.html', bike=bike, members=members)
 
 # -----------------------
@@ -1465,7 +1725,7 @@ def items_delete(item_id):
     item = Item.query.get_or_404(item_id)
     db.session.delete(item)
     db.session.commit()
-    flash('Object verwijderd', 'info')
+    flash('Object verwijderd. Let op: dit is definitief.', 'warning')
     return redirect(url_for('main.inventory'))
 
 
@@ -1494,6 +1754,27 @@ def members_payment(member_id):
 @depot_access_required
 def members_delete(member_id):
     member = Member.query.get_or_404(member_id)
+    # Block deletion if member has active rentals (direct or via child's rental)
+    try:
+        # Direct rentals linked to member
+        direct_active = db.session.query(Rental).filter(
+            Rental.member_id == member.member_id,
+            Rental.status == 'active'
+        ).first()
+        if direct_active:
+            flash('Je kunt geen lid verwijderen met een lopende verhuring.', 'error')
+            return redirect(url_for('main.members_list'))
+
+        # Rentals linked via children of this member
+        child_active = db.session.query(Rental).join(Child, Rental.child_id == Child.child_id).filter(
+            Child.member_id == member.member_id,
+            Rental.status == 'active'
+        ).first()
+        if child_active:
+            flash('Je kunt geen lid verwijderen met een lopende verhuring.', 'error')
+            return redirect(url_for('main.members_list'))
+    except Exception:
+        pass
     # Remove dependent rentals and payments first
     Rental.query.filter_by(member_id=member.member_id).delete(synchronize_session=False)
     Payment.query.filter_by(member_id=member.member_id).delete(synchronize_session=False)
@@ -1602,6 +1883,11 @@ def payment_new():
         
         db.session.add(payment)
         db.session.commit()
+        try:
+            _dashboard_cache['timestamp'] = None
+            _dashboard_cache['data'] = None
+        except Exception:
+            pass
         flash('Betaling geregistreerd', 'success')
         return redirect(url_for('main.payments_list'))
     
@@ -1619,6 +1905,11 @@ def payment_toggle_received(payment_id):
     if payment.method == 'bank_transfer':
         payment.received = not payment.received
         db.session.commit()
+        try:
+            _dashboard_cache['timestamp'] = None
+            _dashboard_cache['data'] = None
+        except Exception:
+            pass
         
         if payment.received:
             flash('Betaling gemarkeerd als ontvangen', 'success')
@@ -1635,6 +1926,11 @@ def payment_delete(payment_id):
     payment = Payment.query.get_or_404(payment_id)
     db.session.delete(payment)
     db.session.commit()
+    try:
+        _dashboard_cache['timestamp'] = None
+        _dashboard_cache['data'] = None
+    except Exception:
+        pass
     flash('Betaling verwijderd', 'info')
     return redirect(url_for('main.payments_list'))
 

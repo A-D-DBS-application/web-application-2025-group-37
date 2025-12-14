@@ -20,6 +20,22 @@
     <div class="text-sm text-gray-500">{{ t('Laatste update') }}: <span class="font-semibold">{{ t('Nu') }}</span></div>
   </div>
 
+  <!-- Popup: Verhuringen die bijna aflopen -->
+  <div id="upcoming-rentals-popup" class="hidden fixed top-20 right-6 z-50 max-w-md">
+    <div class="bg-white rounded-xl shadow-2xl border border-amber-300">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-amber-200 bg-amber-50 rounded-t-xl">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/></svg>
+          <span class="font-semibold text-amber-800">{{ t('Verhuringen die binnen 30 dagen aflopen') }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="text-gray-500 hover:text-gray-700" onclick="document.getElementById('upcoming-rentals-popup').classList.add('hidden')">✕</button>
+        </div>
+      </div>
+      <div id="upcoming-rentals-list" class="p-4 space-y-3"></div>
+    </div>
+  </div>
+
   <!-- ===== SNELLE ACTIES BOVENAAN ===== -->
   <div class="mb-8">
     <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -156,18 +172,18 @@
       </div>
     </div>
 
-    <!-- Statistieken: gemiddeldes -->
+    <!-- Statistieken: snelle telkaart + herstellingstijd -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
       <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-all duration-200">
         <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <svg class="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
-          {{ t('Gemiddelde verhuurperiode') }}
+          {{ t('Actieve verhuringen') }}
         </h3>
-        <div class="text-center p-4 bg-cyan-50 rounded-lg">
-          <div class="text-3xl font-bold text-cyan-600">{{ "%.1f"|format(avg_rental_duration|default(0)) }}</div>
-          <div class="text-sm text-gray-600 mt-1">{{ t('Dagen') }}</div>
+        <div class="text-center p-4 bg-emerald-50 rounded-lg">
+          <div class="text-3xl font-bold text-emerald-600">{{ active_rentals_count|default(0) }}</div>
+          <div class="text-sm text-gray-600 mt-1">{{ t('Aantal') }}</div>
         </div>
       </div>
 
@@ -179,8 +195,13 @@
           {{ t('Gemiddelde herstellingstijd') }}
         </h3>
         <div class="text-center p-4 bg-amber-50 rounded-lg">
-          <div class="text-3xl font-bold text-amber-600">{{ "%.1f"|format(repair_stats.avg_repair_time|default(0)) }}</div>
-          <div class="text-sm text-gray-600 mt-1">{{ t('Dagen') }}</div>
+          {% if repair_stats.avg_repair_time is not none %}
+            <div class="text-3xl font-bold text-amber-600">{{ "%.1f"|format(repair_stats.avg_repair_time) }}</div>
+            <div class="text-sm text-gray-600 mt-1">{{ t('Dagen') }}</div>
+          {% else %}
+            <div class="text-3xl font-bold text-amber-600">{{ t('n.v.t.') }}</div>
+            <div class="text-sm text-gray-600 mt-1">{{ t('Geen gegevens') }}</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -189,7 +210,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">{{ t('Verhuuractiviteit') }}</h3>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('Verhuringen gestart') }}</h3>
           <span class="text-sm text-gray-500">{{ t('Laatste 7 dagen') }}</span>
         </div>
         <div class="h-64">
@@ -279,70 +300,71 @@ document.addEventListener('DOMContentLoaded', function() {
   Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.color = '#6b7280';
   
-  // Chart 1: Verhuuractiviteit (Line Chart)
+  // Chart 1: Verhuringen gestart (Line Chart) — live data from API
   const rentalCtx = document.getElementById('rentalActivityChart');
   if (rentalCtx) {
-    new Chart(rentalCtx, {
-      type: 'line',
-      data: {
-        labels: {{ rental_chart_labels | tojson }},
-        datasets: [
-          {
-            label: 'Verhuringen',
-            data: {{ rental_chart_rentals | tojson }},
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            borderWidth: 2,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6
+    fetch('/api/dashboard/rental-activity')
+      .then(r => r.json())
+      .then(({ labels, rentals }) => {
+        new Chart(rentalCtx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Verhuringen gestart',
+                data: rentals,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6
+              }
+            ]
           },
-          {
-            label: 'Retours',
-            data: {{ rental_chart_returns | tojson }},
-            borderColor: '#8b5cf6',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            borderWidth: 2,
-            tension: 0.4,
-            fill: true,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              padding: 15,
-              usePointStyle: true,
-              font: { size: 12, weight: '500' }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  usePointStyle: true,
+                  font: { size: 12, weight: '500' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                padding: 12,
+                cornerRadius: 8,
+                titleFont: { size: 13, weight: '600' },
+                bodyFont: { size: 12 }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { precision: 0 },
+                grid: { color: '#f3f4f6' }
+              },
+              x: {
+                grid: { display: false }
+              }
             }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            padding: 12,
-            cornerRadius: 8,
-            titleFont: { size: 13, weight: '600' },
-            bodyFont: { size: 12 }
           }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0 },
-            grid: { color: '#f3f4f6' }
-          },
-          x: {
-            grid: { display: false }
-          }
-        }
-      }
-    });
+        });
+      })
+      .catch(() => {
+        // Fallback: minimal chart with empty data to avoid breaking UI
+        new Chart(rentalCtx, {
+          type: 'line',
+          data: { labels: [], datasets: [{ label: 'Verhuringen gestart', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.4, fill: true }] },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      });
   }
 
   // Chart 2: Betalingsmethoden (Doughnut Chart)
@@ -353,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
       data: {
         labels: ['Contant', 'Kaart', 'Bank'],
         datasets: [{
-          data: [{{ cash_payments|default(50) }}, {{ card_payments|default(0) }}, {{ bank_payments|default(0) }}],
+          data: [{{ cash_payments|default(0) }}, {{ card_payments|default(0) }}, {{ bank_payments|default(0) }}],
           backgroundColor: ['#10b981', '#8b5cf6', '#f59e0b'],
           borderWidth: 0,
           hoverOffset: 10
@@ -486,6 +508,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
+  }
+
+  // Show upcoming rentals popup only once after login
+  const hideKey = 'hide_upcoming_rentals_popup';
+  const hideIdsKey = 'hide_upcoming_rentals_ids';
+  const shouldShowPopup = {{ 'true' if session.get('show_upcoming_popup') else 'false' }} && localStorage.getItem(hideKey) !== 'true';
+  if (shouldShowPopup) {
+    fetch('{{ url_for('main.api_dashboard_upcoming_rentals') }}')
+    .then(r => r.json())
+    .then(data => {
+      if (!data || !data.items) return;
+      // Always render container; only show if there are items
+      const popup = document.getElementById('upcoming-rentals-popup');
+      const list = document.getElementById('upcoming-rentals-list');
+      list.innerHTML = '';
+      const dismissed = (() => { try { return JSON.parse(localStorage.getItem(hideIdsKey) || '[]'); } catch(e) { return []; } })();
+      const items = (data.items || []).filter(it => dismissed.indexOf(it.rental_id) === -1);
+      items.forEach(it => {
+        const endStr = (it.end_date || '').split('-').reverse().join('/');
+        const el = document.createElement('div');
+        el.className = 'p-3 border border-amber-100 rounded-lg bg-amber-50';
+        el.dataset.rentalId = it.rental_id;
+        el.innerHTML = `
+          <div class="text-sm text-gray-800">
+            <div class="font-semibold">${it.parent_name} — ${it.child_name}</div>
+            <div class="text-gray-700">${it.bike_name || '-'} • ${endStr}</div>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="text-gray-600">${it.parent_email || '-'}</span>
+              <button class="copy-email-btn px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700" data-email="${(it.parent_email || '').replace(/"/g, '&quot;')}">{{ t('Kopieer e-mail') }}</button>
+              <button class="hide-rental-btn px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded hover:bg-amber-200">{{ t('Niet meer weergeven') }}</button>
+            </div>
+          </div>
+        `;
+        list.appendChild(el);
+      });
+      // Bind copy handlers after rendering
+      list.querySelectorAll('.copy-email-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const email = btn.getAttribute('data-email') || '';
+          navigator.clipboard.writeText(email);
+        });
+      });
+      // Bind per-item hide handlers
+      list.querySelectorAll('.hide-rental-btn').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          const card = ev.target.closest('[data-rental-id]');
+          if (!card) return;
+          const rid = card.dataset.rentalId;
+          let arr = [];
+          try { arr = JSON.parse(localStorage.getItem(hideIdsKey) || '[]'); } catch(e) { arr = []; }
+          if (arr.indexOf(rid) === -1) { arr.push(rid); }
+          try { localStorage.setItem(hideIdsKey, JSON.stringify(arr)); } catch(e) {}
+          card.remove();
+          // If no items left, hide popup
+          if (!list.children.length) {
+            popup.classList.add('hidden');
+          }
+        });
+      });
+      if (data.items.length > 0) {
+        if (list.children.length > 0) {
+          popup.classList.remove('hidden');
+        } else {
+          popup.classList.add('hidden');
+        }
+      } else {
+        popup.classList.add('hidden');
+      }
+      // Acknowledge so it doesn't show again in this session
+      fetch('{{ url_for('main.api_dashboard_upcoming_rentals_ack') }}', { method: 'POST' }).catch(() => {});
+      // Per-item dismiss is handled on each card; no global hide button
+    })
+    .catch(() => {});
   }
 
 });

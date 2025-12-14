@@ -149,7 +149,7 @@
             {% elif payment.method == 'card' %}
               {{ t('Kaart') }}
             {% elif payment.method == 'bank_transfer' %}
-              {{ t('Bank') }}
+              {{ t('Overschrijving') }}
             {% endif %}
           </td>
 
@@ -223,7 +223,7 @@
           </span>
           {% elif payment.method == 'bank_transfer' %}
           <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-            {{ t('Bank') }}
+            {{ t('Overschrijving') }}
           </span>
           {% endif %}
         </div>
