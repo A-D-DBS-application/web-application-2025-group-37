@@ -32,7 +32,7 @@
         <td class="py-3 px-4">
           {% if r %}
             <div class="text-sm">
-              <div>{{ t('Fiets') }}: <strong>{{ r.bike_id }}</strong></div>
+              <div>{{ t('Fiets') }}: <strong>{{ r.bike and r.bike.name or '-' }}</strong></div>
               <div>{{ t('Start') }}: {{ r.start_date }}</div>
             </div>
           {% else %}
@@ -57,7 +57,13 @@
           {% endif %}
         </td>
         <td class="py-3 px-4">
-          <!-- Reserve for future actions (verwijderen/retour) -->
+          <div class="flex items-center gap-2 justify-end">
+            <form method="POST" action="{{ url_for('main.members_children_delete', member_id=member.member_id, child_id=c.child_id) }}" onsubmit="return confirmDeleteChild(event, '{{ c.first_name }} {{ c.last_name }}', {{ 'true' if r else 'false' }});">
+              <button class="icon-btn {{ r and 'opacity-50 cursor-not-allowed' or '' }}" title="{{ r and t('Kan niet verwijderen: actieve verhuring') or t('Verwijderen') }}" {{ r and 'disabled' or '' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14"/></svg>
+              </button>
+            </form>
+          </div>
         </td>
       </tr>
     {% else %}
@@ -68,4 +74,16 @@
     </tbody>
   </table>
 </div>
+<script>
+function confirmDeleteChild(event, childName, hasActiveRental) {
+  event.preventDefault();
+  if (hasActiveRental) {
+    alert('{{ t('Kan kind niet verwijderen met actieve verhuring.') }}');
+    return false;
+  }
+  const msg = `${childName}\n\n` + '{{ t('Weet je zeker dat je dit kind wilt verwijderen? Deze actie kan niet ongedaan gemaakt worden.') }}';
+  if (confirm(msg)) { event.target.submit(); }
+  return false;
+}
+</script>
 {% endblock %}

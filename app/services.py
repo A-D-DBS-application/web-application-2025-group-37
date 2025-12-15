@@ -101,7 +101,8 @@ def get_dashboard_stats():
         total = Bike.query.filter_by(type=t_name, archived=False).count()
         avail = Bike.query.filter_by(type=t_name, status='available', archived=False).count()
         rented = Bike.query.filter_by(type=t_name, status='rented', archived=False).count()
-        bike_categories.append({'name': t_name.title(), 'total': total, 'available': avail, 'rented': rented})
+        repair = Bike.query.filter_by(type=t_name, status='repair', archived=False).count()
+        bike_categories.append({'name': t_name.title(), 'total': total, 'available': avail, 'rented': rented, 'repair': repair})
 
     # --- RETURN CONTEXT ---
     return {
@@ -173,13 +174,17 @@ def get_dashboard_stats():
     }
 
 def get_rental_activity_data():
-    """API helper"""
+    """API helper for dashboard chart: weekly rentals started (last 8 weeks)."""
     today = date.today()
     labels = []
     data = []
-    for i in range(6, -1, -1):
-        day = today - timedelta(days=i)
-        labels.append(day.strftime('%d/%m'))
-        count = Rental.query.filter(func.date(Rental.start_date) == day).count()
+    # Start from Monday of current week
+    start_of_week = today - timedelta(days=today.weekday())
+    # Build 8 weeks history including current
+    for i in range(7, -1, -1):
+        week_start = start_of_week - timedelta(weeks=i)
+        week_end = week_start + timedelta(days=7)
+        labels.append(week_start.strftime('%d/%m'))
+        count = Rental.query.filter(Rental.start_date >= week_start, Rental.start_date < week_end).count()
         data.append(count)
     return {'labels': labels, 'rentals': data}

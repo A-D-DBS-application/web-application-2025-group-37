@@ -331,6 +331,22 @@ def members_children(member_id):
     bikes = Bike.query.filter_by(status='available', archived=False).all()
     return render_template('children.html', member=member, children=member.children, active_rentals=active_rentals, available_bikes=bikes)
 
+@main.route('/members/<member_id>/children/add', methods=['POST'])
+@login_required
+@depot_access_required
+def members_children_add(member_id):
+    # Voeg een kind toe aan een lid (eenvoudig formulier vanaf children.html)
+    Member.query.get_or_404(member_id)
+    first = (request.form.get('first_name') or '').strip()
+    last = (request.form.get('last_name') or '').strip()
+    if not first:
+        flash('Voornaam is verplicht.', 'error')
+        return redirect(url_for('main.members_children', member_id=member_id))
+    db.session.add(Child(member_id=member_id, first_name=first, last_name=last or ''))
+    db.session.commit()
+    flash('Kind toegevoegd.', 'success')
+    return redirect(url_for('main.members_children', member_id=member_id))
+
 @main.route('/members/<member_id>/children/<child_id>/assign', methods=['POST'])
 @login_required
 @depot_access_required
@@ -347,6 +363,20 @@ def members_children_assign(member_id, child_id):
     db.session.add(Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id))
     bike.status = 'rented'
     db.session.commit()
+    return redirect(url_for('main.members_children', member_id=member_id))
+
+@main.route('/members/<member_id>/children/<child_id>/delete', methods=['POST'])
+@login_required
+@depot_access_required
+def members_children_delete(member_id, child_id):
+    # Server-side guard: blokkeer verwijderen bij actieve verhuring
+    if Rental.query.filter_by(child_id=child_id, status='active').first():
+        flash('Kan kind niet verwijderen met actieve verhuring.', 'error')
+        return redirect(url_for('main.members_children', member_id=member_id))
+    ch = Child.query.get_or_404(child_id)
+    db.session.delete(ch)
+    db.session.commit()
+    flash('Kind verwijderd.', 'info')
     return redirect(url_for('main.members_children', member_id=member_id))
 
 # --- VERHURINGEN (RENTALS) ---
