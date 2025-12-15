@@ -109,13 +109,10 @@ def set_language(lang_code):
 @login_required
 def dashboard():
     _expire_past_due_rentals()
-    # Importeer de logica uit een aparte service om deze route schoon te houden
     from app.services import get_dashboard_stats 
-    
     ctx = get_dashboard_stats()
     return render_template('dashboard.html', **ctx)
 
-# API endpoints voor dashboard
 @main.route('/api/dashboard/rental-activity')
 @login_required
 def api_dashboard_rental_activity():
@@ -150,7 +147,6 @@ def inventory():
     bikes = Bike.query.filter_by(archived=False).order_by(Bike.created_at.desc()).all()
     items = Item.query.order_by(Item.created_at.desc()).all()
     
-    # Map active rentals to names for display
     rental_map = {}
     for r in Rental.query.filter_by(status='active').all():
         name = f"{r.member.first_name} {r.member.last_name}" if r.member else "Onbekend"
@@ -165,7 +161,7 @@ def inventory():
         rented_items=[i for i in items if i.status in ['rented', 'unavailable']],
         repair_items=[i for i in items if i.status == 'repair'],
         rental_map=rental_map,
-        item_rental_map={} # Placeholder voor items
+        item_rental_map={} 
     )
 
 @main.route('/bikes/new', methods=['GET', 'POST'])
@@ -215,7 +211,6 @@ def bikes_delete(bike_id):
     flash('Fiets verwijderd.', 'warning')
     return redirect(url_for('main.inventory'))
 
-# Unified creation route for objects/bikes
 @main.route('/objects/new', methods=['GET', 'POST'])
 @login_required
 @depot_access_required
@@ -249,11 +244,8 @@ def items_delete(item_id):
 @depot_access_required
 def members_list():
     members = Member.query.order_by(Member.last_name, Member.first_name).all()
-    # Filter actieve/inactieve leden in Python of query
     active = [m for m in members if m.status in ['active', 'actief', None]]
     inactive = [m for m in members if m.status not in ['active', 'actief', None]]
-    
-    # Blokkeer verwijderen als ze actieve verhuur hebben
     blocked_ids = {r.member_id for r in Rental.query.filter_by(status='active').all() if r.member_id}
     
     return render_template('members.html', active_members=active, inactive_members=inactive, members_sorted=members, today=date.today(), blocked_member_ids=blocked_ids)
@@ -274,14 +266,11 @@ def members_new():
             city=request.form.get('city'),
             status=request.form.get('status', 'active')
         )
-        # Bouw adres string
         parts = [p for p in [m.street, m.house_number, m.postcode, m.city] if p]
         m.address = " ".join(parts)
         
         db.session.add(m)
-        db.session.flush() # ID genereren voor kinderen
-        
-        # Kinderen toevoegen
+        db.session.flush() 
         for fn, ln in zip(request.form.getlist('child_first_name[]'), request.form.getlist('child_last_name[]')):
             if fn.strip(): db.session.add(Child(member_id=m.member_id, first_name=fn, last_name=ln))
             
@@ -309,7 +298,6 @@ def members_edit(member_id):
         parts = [p for p in [m.street, m.house_number, m.postcode, m.city] if p]
         m.address = " ".join(parts)
         
-        # Update kinderen (simpele manier: alles wissen en opnieuw toevoegen)
         for child in m.children: db.session.delete(child)
         for fn, ln in zip(request.form.getlist('child_first_name[]'), request.form.getlist('child_last_name[]')):
             if fn.strip(): db.session.add(Child(member_id=m.member_id, first_name=fn, last_name=ln))
@@ -323,13 +311,11 @@ def members_edit(member_id):
 @login_required
 @depot_access_required
 def members_delete(member_id):
-    # Check eerst op actieve verhuringen
     if Rental.query.filter((Rental.member_id == member_id) & (Rental.status == 'active')).first():
         flash('Kan lid niet verwijderen met actieve verhuring.', 'error')
         return redirect(url_for('main.members_list'))
         
     m = Member.query.get_or_404(member_id)
-    # Verwijder gerelateerde data
     Rental.query.filter_by(member_id=m.member_id).delete()
     Payment.query.filter_by(member_id=m.member_id).delete()
     db.session.delete(m)
@@ -349,7 +335,6 @@ def members_children(member_id):
 @login_required
 @depot_access_required
 def members_children_assign(member_id, child_id):
-    # Check of kind al verhuring heeft
     if Rental.query.filter_by(child_id=child_id, status='active').first():
         flash('Dit kind heeft al een actieve verhuring.', 'error')
         return redirect(url_for('main.members_children', member_id=member_id))
@@ -359,7 +344,6 @@ def members_children_assign(member_id, child_id):
         flash('Fiets niet beschikbaar.', 'error')
         return redirect(url_for('main.members_children', member_id=member_id))
         
-    # Maak verhuring
     db.session.add(Rental(bike_id=bike.bike_id, member_id=member_id, child_id=child_id))
     bike.status = 'rented'
     db.session.commit()
@@ -372,14 +356,17 @@ def members_children_assign(member_id, child_id):
 @finance_access_required
 def rentals_list():
     _expire_past_due_rentals()
-    query = db.session.query(Rental, Bike, Child, Member).join(Bike).join(Child).join(Member)
+    # FIX: Gebruik outerjoin voor Child en Member zodat verhuringen zonder kind/member niet verdwijnen
+    query = db.session.query(Rental, Bike, Child, Member)\
+        .join(Bike)\
+        .outerjoin(Child, Rental.child_id == Child.child_id)\
+        .outerjoin(Member, Rental.member_id == Member.member_id)
     
     status = request.args.get('status', 'all')
     if status != 'all': query = query.filter(Rental.status == status)
     
     rentals = query.order_by(Rental.status, Rental.start_date.desc()).all()
     
-    # Simpele counts
     counts = {
         'active': Rental.query.filter_by(status='active').count(),
         'returned': Rental.query.filter_by(status='returned').count()
@@ -388,7 +375,7 @@ def rentals_list():
     return render_template('rentals.html', rentals_data=rentals, total_active=counts['active'], total_returned=counts['returned'], bike_types=BIKE_TYPES, status_filter=status, bike_type=request.args.get('bike_type', ''), search_query=request.args.get('search', ''))
 
 @main.route('/rentals/new', methods=['GET', 'POST'])
-@main.route('/rent/<bike_id>', methods=['GET', 'POST']) # Support both URLs
+@main.route('/rent/<bike_id>', methods=['GET', 'POST'])
 @login_required
 @depot_access_required
 def rental_new(bike_id=None):
@@ -397,7 +384,6 @@ def rental_new(bike_id=None):
         member_id = request.form.get('member_id')
         child_id = request.form.get('child_id') or None
         
-        # Validatie: kind mag maar 1 actieve verhuring hebben
         if child_id and Rental.query.filter_by(child_id=child_id, status='active').first():
             flash('Dit kind heeft al een actieve verhuring.', 'error')
             return redirect(url_for('main.rental_new'))
@@ -407,7 +393,6 @@ def rental_new(bike_id=None):
             flash('Fiets is niet beschikbaar.', 'error')
             return redirect(url_for('main.inventory'))
 
-        # Maak verhuring
         start = date.fromisoformat(request.form.get('start_date')) if request.form.get('start_date') else date.today()
         from datetime import timedelta
         rental = Rental(
@@ -417,22 +402,18 @@ def rental_new(bike_id=None):
         bike.status = 'rented'
         db.session.add(rental)
         
-        # Maak betaling
         amt = float(request.form.get('amount') or 0)
         method = request.form.get('payment_method', 'cash')
         paid = (method in ['cash', 'card']) or (request.form.get('received') == 'true')
         
         pay = Payment(member_id=member_id, amount=amt, method=method, paid_at=start, received=paid)
         db.session.add(pay)
-        
-        # Update lid laatste betaling
         Member.query.get(member_id).last_payment = start
         
         db.session.commit()
         flash('Verhuring succesvol.', 'success')
         return redirect(url_for('main.rentals_list'))
 
-    # GET request
     context = {
         'members': Member.query.order_by(Member.last_name).all(),
         'available_bikes': Bike.query.filter_by(status='available', archived=False).all(),
@@ -466,6 +447,20 @@ def rentals_cancel(rental_id):
     flash('Verhuring geannuleerd.', 'info')
     return redirect(url_for('main.rentals_list'))
 
+# FIX: Route toegevoegd voor verwijderen van oude verhuringen (gebruikt door rentals.html)
+@main.route('/rentals/<rental_id>/delete', methods=['POST'])
+@login_required
+@depot_access_required
+def rentals_delete_returned(rental_id):
+    r = Rental.query.get_or_404(rental_id)
+    if r.status == 'active':
+        flash('Kan actieve verhuring niet verwijderen (gebruik annuleren).', 'error')
+        return redirect(url_for('main.rentals_list'))
+    db.session.delete(r)
+    db.session.commit()
+    flash('Verhuring verwijderd.', 'info')
+    return redirect(url_for('main.rentals_list'))
+
 # --- BETALINGEN (PAYMENTS) ---
 
 @main.route('/payments')
@@ -473,14 +468,9 @@ def rentals_cancel(rental_id):
 @finance_access_required
 def payments_list():
     query = db.session.query(Payment, Member).join(Member).order_by(Payment.paid_at.desc())
-    
-    # Filters
     if request.args.get('method') not in [None, 'all']:
         query = query.filter(Payment.method == request.args.get('method'))
-        
     payments = query.all()
-    
-    # Stats
     total = sum(p.amount for p, m in payments if p.received)
     
     return render_template('payments.html', payments_data=payments, total_payments=total, 
@@ -502,8 +492,6 @@ def payment_new(member_id=None):
         
         p = Payment(member_id=mid, amount=amt, method=method, received=received)
         if date_str: p.paid_at = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        # Update lid
         Member.query.get(mid).last_payment = p.paid_at
         
         db.session.add(p)
@@ -511,7 +499,6 @@ def payment_new(member_id=None):
         return redirect(url_for('main.payments_list'))
         
     members = Member.query.order_by(Member.last_name).all()
-    # Als member_id meegegeven is, render specifieke form, anders algemene
     if member_id:
         return render_template('payment_form.html', member=Member.query.get(member_id))
     return render_template('payment_form_new.html', members=members, today=date.today())

@@ -28,21 +28,7 @@
   } %}
   {{ map.get(key, s) }}
 {% endmacro %}
-{% macro status_fr(s) %}
-  {% set key = (s or '-')|lower %}
-  {% set map = {
-    'available': 'Disponible',
-    'beschikbaar': 'Disponible',
-    'rented': 'Loué',
-    'verhuurd': 'Loué',
-    'repair': 'En réparation',
-    'in herstelling': 'En réparation',
-    'unavailable': 'Indisponible',
-    'onbeschikbaar': 'Indisponible',
-    '-': '-' 
-  } %}
-  {{ map.get(key, s) }}
-{% endmacro %}
+
 <div class="flex items-center justify-between mb-4">
   <div>
     <h2 class="text-2xl md:text-3xl font-semibold">{{ t('Inventaris') }}</h2>
@@ -52,8 +38,6 @@
     <a href="{{ url_for('main.objects_new') }}" class="btn btn-primary">{{ t('Nieuw object') }}</a>
   </div>
 </div>
-
-<!-- Insights removed to restore previous inventory layout -->
 
 <div class="inventory-table-wrapper card p-4 mb-8">
   <h3 class="text-lg font-semibold mb-4">{{ t('Fietsen') }}</h3>
@@ -82,7 +66,7 @@
           <td class="py-2 px-3 text-xs text-gray-500">-</td>
           <td class="py-2 px-3 text-right">
             <div class="flex items-center justify-end gap-2">
-              <a href="{{ url_for('main.rent_bike_action', bike_id=b.bike_id) }}" class="btn btn-primary btn-sm">{{ t('Verhuren') }}</a>
+              <a href="{{ url_for('main.rental_new', bike_id=b.bike_id) }}" class="btn btn-primary btn-sm">{{ t('Verhuren') }}</a>
               <form method="POST" action="{{ url_for('main.bikes_status', bike_id=b.bike_id) }}" class="inline-block">
                 <input type="hidden" name="status" value="repair" />
                 <button class="btn btn-sm" aria-label="{{ t('In herstelling') }}" title="{{ t('In herstelling') }}">{{ t('In herstelling') }}</button>
@@ -180,7 +164,6 @@
     <input id="item-filter" type="text" class="border rounded p-2 w-full max-w-md" placeholder="{{ t('Zoek objectnaam of type…') }}">
   </div>
   
-
   <div class="border rounded bg-white shadow-sm mb-6">
     <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
       <span>{{ t('Beschikbare objecten') }} ({{ available_items|length }})</span>
@@ -214,7 +197,7 @@
       </tbody>
     </table>
   </div>
-
+  
   <div class="border rounded bg-white shadow-sm mb-6">
     <div class="px-4 py-2 border-b font-medium flex justify-between items-center">
       <span>{{ t('Onbeschikbare objecten') }} ({{ rented_items|length }})</span>
@@ -328,4 +311,3 @@
 </script>
 
 {% endblock %}
-
