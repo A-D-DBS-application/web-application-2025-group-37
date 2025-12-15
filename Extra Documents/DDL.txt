@@ -1,0 +1,77 @@
+CREATE TABLE public.bike (
+  bike_id character varying NOT NULL,
+  created_at timestamp without time zone,
+  name character varying NOT NULL,
+  type character varying,
+  status character varying,
+  archived boolean,
+  CONSTRAINT bike_pkey PRIMARY KEY (bike_id)
+);
+CREATE TABLE public.child (
+  child_id character varying NOT NULL,
+  member_id character varying NOT NULL,
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  CONSTRAINT child_pkey PRIMARY KEY (child_id),
+  CONSTRAINT child_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.member(member_id)
+);
+CREATE TABLE public.item (
+  item_id character varying NOT NULL,
+  created_at timestamp without time zone,
+  name character varying NOT NULL,
+  type character varying,
+  status character varying,
+  archived boolean,
+  CONSTRAINT item_pkey PRIMARY KEY (item_id)
+);
+CREATE TABLE public.member (
+  member_id character varying NOT NULL,
+  created_at timestamp without time zone,
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  email character varying,
+  phone character varying,
+  address character varying,
+  last_payment date,
+  status character varying,
+  street character varying,
+  house_number character varying,
+  postcode character varying,
+  city character varying,
+  CONSTRAINT member_pkey PRIMARY KEY (member_id)
+);
+CREATE TABLE public.payment (
+  payment_id character varying NOT NULL,
+  created_at timestamp without time zone,
+  member_id character varying NOT NULL,
+  amount double precision NOT NULL,
+  paid_at date,
+  method character varying DEFAULT 'cash'::character varying,
+  received boolean DEFAULT true,
+  CONSTRAINT payment_pkey PRIMARY KEY (payment_id),
+  CONSTRAINT payment_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.member(member_id)
+);
+CREATE TABLE public.rental (
+  rental_id character varying NOT NULL,
+  created_at timestamp without time zone,
+  bike_id character varying NOT NULL,
+  member_id character varying,
+  child_id character varying,
+  start_date date,
+  end_date date,
+  status character varying,
+  CONSTRAINT rental_pkey PRIMARY KEY (rental_id),
+  CONSTRAINT rental_bike_id_fkey FOREIGN KEY (bike_id) REFERENCES public.bike(bike_id),
+  CONSTRAINT rental_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.member(member_id),
+  CONSTRAINT rental_child_id_fkey FOREIGN KEY (child_id) REFERENCES public.child(child_id)
+);
+CREATE TABLE public.user (
+  user_id character varying NOT NULL,
+  created_at timestamp without time zone,
+  first_name character varying,
+  last_name character varying,
+  email character varying,
+  password character varying,
+  role character varying,
+  CONSTRAINT user_pkey PRIMARY KEY (user_id)
+);
