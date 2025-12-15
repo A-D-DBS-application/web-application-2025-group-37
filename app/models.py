@@ -16,15 +16,6 @@ RENTAL_STATUSES = ['active', 'returned']
 ITEM_STATUSES = ['available', 'rented', 'repair', 'unavailable']
 PAYMENT_METHODS = ['cash', 'card', 'bank_transfer']
 
-class Employee(db.Model):
-    employee_id = db.Column(db.String, primary_key=True, default=gen_uuid)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    first_name = db.Column(db.String(100))
-    last_name = db.Column(db.String(100))
-    email = db.Column(db.String(120))
-    password = db.Column(db.String(255))
-    employee_type = db.Column(db.String(50))
-
 class User(db.Model):
     """
     User model voor authenticatie en autorisatie.
@@ -43,7 +34,7 @@ class User(db.Model):
     email = db.Column(db.String(120))
     password = db.Column(db.String(255))
     role = db.Column(db.String(50), default='depot_manager')
-    employee_id = db.Column(db.String, db.ForeignKey('employee.employee_id'))
+   
 
     def set_password(self, raw: str):
         """Hash en sla wachtwoord veilig op"""
