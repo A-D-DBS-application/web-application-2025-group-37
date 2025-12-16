@@ -85,6 +85,11 @@ function filterChildren() {
     if (!opt.value) { opt.hidden = false; return; }
     opt.hidden = !!(mid && opt.dataset.member && opt.dataset.member !== mid);
   });
+  // Reset child selection if current selection doesn't belong to chosen member
+  const selectedOpt = childSelect.selectedOptions[0];
+  if (selectedOpt && selectedOpt.value && mid && selectedOpt.dataset.member && selectedOpt.dataset.member !== mid) {
+    childSelect.value = '';
+  }
   childWarning.classList.add('hidden');
   childWarning.textContent='';
   if (submitBtn) submitBtn.disabled = false;

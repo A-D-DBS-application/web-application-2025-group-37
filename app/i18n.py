@@ -130,6 +130,7 @@ TRANSLATIONS = {
         'Verhuurd door': 'Loué par',
         # Children page
         'Kinderen': 'Enfants',
+        'één kind': 'un enfant',
         'Kind toevoegen': 'Ajouter un enfant',
         'Kinderen van': 'Enfants de',
         'Voornaam': 'Prénom',

@@ -38,7 +38,14 @@
         {% set payment_status = 'none' if not m.last_payment else ('overdue' if (today - m.last_payment).days > 365 else 'ok') %}
         <td class="py-2 px-3">{% if payment_status == 'none' %}<span class="text-red-600">{{ t('Geen betaling') }}</span>{% elif payment_status == 'overdue' %}{{ t('Overdue') }}{% else %}{{ m.last_payment and m.last_payment.strftime('%Y-%m-%d') or '-' }}{% endif %}</td>
         <td class="py-2 px-3">
-          <a href="{{ url_for('main.members_children', member_id=m.member_id) }}" class="link">{{ t('Zie kinderen') }}</a>
+          {% set children_count = (m.children|length if m.children else 0) %}
+          <a href="{{ url_for('main.members_children', member_id=m.member_id) }}" class="link">
+            {% if children_count == 1 %}
+              1 {{ t('Kind') }}
+            {% else %}
+              {{ children_count }} {{ t('Kinderen') }}
+            {% endif %}
+          </a>
         </td>
         <td class="py-2 px-3">
           <div class="flex items-center justify-end gap-2">
