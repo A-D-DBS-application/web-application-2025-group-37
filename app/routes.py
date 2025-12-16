@@ -1,12 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from app.extensions import db
 from app.models import (
     Member, Child, User, Bike, Rental, Payment, Item,
     MEMBER_STATUSES, BIKE_TYPES, BIKE_STATUSES, ITEM_STATUSES, PAYMENT_METHODS
 )
 from functools import wraps
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 # Definieer de blueprint
 main = Blueprint('main', __name__)
@@ -395,6 +395,24 @@ def rentals_list():
     status = request.args.get('status', 'all')
     if status != 'all': query = query.filter(Rental.status == status)
     
+    # Optioneel filter op fietstype
+    bike_type = request.args.get('bike_type') or ''
+    if bike_type:
+        query = query.filter(Bike.type == bike_type)
+    
+    # Optioneel zoeken op naam kind of ouder
+    search = (request.args.get('search') or '').strip()
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(
+            or_(
+                func.lower(Member.first_name).like(like),
+                func.lower(Member.last_name).like(like),
+                func.lower(Child.first_name).like(like),
+                func.lower(Child.last_name).like(like)
+            )
+        )
+    
     rentals = query.order_by(Rental.status, Rental.start_date.desc()).all()
     
     counts = {
@@ -402,7 +420,16 @@ def rentals_list():
         'returned': Rental.query.filter_by(status='returned').count()
     }
     
-    return render_template('rentals.html', rentals_data=rentals, total_active=counts['active'], total_returned=counts['returned'], bike_types=BIKE_TYPES, status_filter=status, bike_type=request.args.get('bike_type', ''), search_query=request.args.get('search', ''))
+    return render_template(
+        'rentals.html',
+        rentals_data=rentals,
+        total_active=counts['active'],
+        total_returned=counts['returned'],
+        bike_types=BIKE_TYPES,
+        status_filter=status,
+        bike_type=bike_type,
+        search_query=search
+    )
 
 @main.route('/rentals/new', methods=['GET', 'POST'])
 @main.route('/rent/<bike_id>', methods=['GET', 'POST'])
@@ -497,16 +524,63 @@ def rentals_delete_returned(rental_id):
 @login_required
 @finance_access_required
 def payments_list():
-    query = db.session.query(Payment, Member).join(Member).order_by(Payment.paid_at.desc())
-    if request.args.get('method') not in [None, 'all']:
-        query = query.filter(Payment.method == request.args.get('method'))
+    # Base query
+    query = db.session.query(Payment, Member).join(Member)
+
+    # Filters
+    method_filter = request.args.get('method', 'all')
+    if method_filter != 'all':
+        query = query.filter(Payment.method == method_filter)
+
+    period_filter = request.args.get('period', 'all')
+    if period_filter != 'all':
+        today = date.today()
+        if period_filter == 'today':
+            start = today
+        elif period_filter == 'week':
+            # Monday as start of week
+            start = today - timedelta(days=today.weekday())
+        elif period_filter == 'month':
+            start = today.replace(day=1)
+        else:
+            start = None
+        if start is not None:
+            query = query.filter(Payment.paid_at >= start)
+
+    search = (request.args.get('search') or '').strip()
+    if search:
+        like = f"%{search.lower()}%"
+        query = query.filter(or_(func.lower(Member.first_name).like(like),
+                                 func.lower(Member.last_name).like(like),
+                                 func.lower(Member.email).like(like)))
+
+    # Sorting
+    sort = request.args.get('sort', 'date')
+    direction = request.args.get('dir', 'desc')
+    if sort == 'method':
+        order_clause = Payment.method.asc() if direction == 'asc' else Payment.method.desc()
+    elif sort == 'amount':
+        order_clause = Payment.amount.asc() if direction == 'asc' else Payment.amount.desc()
+    else:
+        order_clause = Payment.paid_at.asc() if direction == 'asc' else Payment.paid_at.desc()
+    query = query.order_by(order_clause, Payment.paid_at.desc())
+
     payments = query.all()
     total = sum(p.amount for p, m in payments if p.received)
-    
-    return render_template('payments.html', payments_data=payments, total_payments=total, 
-                           cash_payments=sum(p.amount for p, m in payments if p.method=='cash'),
-                           card_payments=sum(p.amount for p, m in payments if p.method=='card'),
-                           bank_payments=sum(p.amount for p, m in payments if p.method=='bank_transfer' and p.received))
+
+    return render_template(
+        'payments.html',
+        payments_data=payments,
+        total_payments=total,
+        cash_payments=sum(p.amount for p, m in payments if p.method=='cash'),
+        card_payments=sum(p.amount for p, m in payments if p.method=='card'),
+        bank_payments=sum(p.amount for p, m in payments if p.method=='bank_transfer' and p.received),
+        method_filter=method_filter,
+        period_filter=period_filter,
+        search_query=search,
+        sort=sort,
+        direction=direction
+    )
 
 @main.route('/payments/new', methods=['GET', 'POST'])
 @main.route('/members/<member_id>/payment', methods=['GET', 'POST'])

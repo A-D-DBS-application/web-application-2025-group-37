@@ -291,6 +291,7 @@ TRANSLATIONS = {
         'Kaart': 'Carte',
         'Bank': 'Banque',
         'Bankoverschrijving': 'Virement bancaire',
+        'Overschrijving': 'Virement bancaire',
         'Periode': 'Période',
         'Deze week': 'Cette semaine',
         'Deze maand': 'Ce mois',
