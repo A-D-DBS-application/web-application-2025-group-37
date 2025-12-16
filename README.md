@@ -4,9 +4,9 @@ Additional information when starting the application: When you arrive at the log
 
 Link to prototype: https://www.figma.com/make/PPaubZgRH6mE9MG5JpGjOM/MPACT-MVP?node-id=0-1&t=sepbqLgqintdE4d1-1
 
-Link to video recording first feedbackmoment: https://drive.google.com/file/d/1J-g5BYOExtlaaGa-W5ksn-G5ZtKAiu7b/view?usp=sharing
-
-Link to video recording second feedbackmoment: https://drive.google.com/file/d/1pcFEYH9JjQ46AN391SU11OmLBuWSIN4k/view?usp=sharing
+Link to video recording first of feedbackmoment: https://drive.google.com/file/d/1J-g5BYOExtlaaGa-W5ksn-G5ZtKAiu7b/view?usp=sharing
+Link to video recording of second feedbackmoment: https://drive.google.com/file/d/1pcFEYH9JjQ46AN391SU11OmLBuWSIN4k/view?usp=sharing
+Link to video recording of third and last feedbackmoment: https://drive.google.com/file/d/1DbR4_g2hbFqzRKfpPrHshrX9t03pfqht/view?usp=sharing
 
 Link to render: https://web-application-2025-group-37-p37c.onrender.com 
 
